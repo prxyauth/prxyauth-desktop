@@ -20,9 +20,11 @@ import {
   Star,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ProvisioningModal } from "../../shared/components/ProvisioningModal";
 import { MarketplaceLoginForm } from "./MarketplaceLoginForm";
+import { useSubscriptions } from "../subscriptions/useSubscriptions";
+import { SubscriptionCard } from "../subscriptions/SubscriptionCard";
 
 const PROVIDERS = [
   {
@@ -71,27 +73,11 @@ const PROVIDERS = [
 ];
 
 export function MarketplaceView() {
-  const [licenses, setLicenses] = useState<string[]>([]);
+  const { subscriptions, refresh: fetchLicenses } = useSubscriptions();
   const [isPurchasing, setIsPurchasing] = useState<string | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [showConnect, setShowConnect] = useState(false);
   const [showProvisioning, setShowProvisioning] = useState(false);
-  const [, setIsLoadingLicenses] = useState(true);
-
-  useEffect(() => {
-    fetchLicenses();
-  }, []);
-
-  const fetchLicenses = async () => {
-    try {
-      const active = await billingApi.listLicenses();
-      setLicenses(active);
-    } catch (err) {
-      console.error("Failed to fetch licenses", err);
-    } finally {
-      setIsLoadingLicenses(false);
-    }
-  };
 
   const handlePurchase = async (p: string) => {
     try {
@@ -178,12 +164,44 @@ export function MarketplaceView() {
         ))}
       </div>
 
+      {/* Your Subscriptions Section */}
+      {subscriptions.length > 0 && !showConnect && (
+        <section className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-8 bg-primary rounded-full shadow-[0_0_10px_var(--primary-glow)]" />
+            <h2 className="text-2xl font-black text-white tracking-tighter uppercase">
+              Your Subscriptions
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {subscriptions.map((license, idx) => (
+              <SubscriptionCard
+                key={license.provider}
+                license={license}
+                index={idx}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Provider Marketplace Head */}
+      {!showConnect && (
+        <div className="flex items-center gap-3 pt-4">
+          <div className="w-1.5 h-8 bg-primary rounded-full shadow-[0_0_10px_var(--primary-glow)]" />
+          <h2 className="text-2xl font-black text-white tracking-tighter uppercase">
+            Available Infrastructure
+          </h2>
+        </div>
+      )}
+
       {/* Provider Marketplace */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <AnimatePresence mode="wait">
           {!showConnect ? (
             PROVIDERS.map((p, idx) => {
-              const isLicensed = licenses.includes(p.id);
+              const license = subscriptions.find((s) => s.provider === p.id);
+              const isLicensed = !!license && license.status === "active";
               return (
                 <motion.div
                   key={p.id}
@@ -350,7 +368,7 @@ export function MarketplaceView() {
                       | "office"
                       | "github"
                   }
-                  licenses={licenses}
+                  licenses={subscriptions.map((s) => s.provider)}
                   onSuccess={handleLoginSuccess}
                   onBack={() => setShowConnect(false)}
                   onPurchase={handlePurchase}
