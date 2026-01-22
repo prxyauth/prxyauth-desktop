@@ -53,11 +53,19 @@
       "buildResources": "assets"
     },
     "asar": true,
-    "publish": {
-      "provider": "github",
-      "owner": "prxyauth",
-      "repo": "prxyauth-desktop"
-    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "prxyauth",
+        "repo": "prxyauth-desktop"
+      },
+      {
+        "provider": "s3",
+        "bucket": "releases",
+        "region": "us-east-1",
+        "endpoint": "https://ehplnrhjwpnbicpcyvoa.storage.supabase.co/storage/v1/s3"
+      }
+    ],
     "win": {
       "target": [
         {

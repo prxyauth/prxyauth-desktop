@@ -35,3 +35,5 @@ jobs:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.SUPABASE_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SUPABASE_SECRET_ACCESS_KEY }}
