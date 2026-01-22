@@ -1375,9 +1375,16 @@ ipcMain.handle("playwright:listConnections", async () => {
 });
 
 // App lifecycle
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createWindow();
-  initAutoUpdater();
+
+  // Initialize auto-updater with window reference for progress display
+  initAutoUpdater(mainWindow);
+
+  // Check and install Playwright browser if needed (production only)
+  if (app.isPackaged) {
+    await ensurePlaywrightBrowser();
+  }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -1385,6 +1392,64 @@ app.whenReady().then(() => {
     }
   });
 });
+
+/**
+ * Ensure Playwright Chromium browser is installed
+ * This runs on first launch and installs the browser if missing
+ */
+async function ensurePlaywrightBrowser(): Promise<void> {
+  const { execSync } = await import("child_process");
+  const log = await import("electron-log");
+
+  try {
+    // Try to get browser executable path - this will throw if not installed
+    const executablePath = chromium.executablePath();
+    const fs = await import("fs");
+
+    if (!fs.existsSync(executablePath)) {
+      throw new Error("Browser not found");
+    }
+
+    log.default.info(
+      "Playwright browser already installed at:",
+      executablePath,
+    );
+  } catch (error) {
+    log.default.info("Playwright browser not found, installing...");
+
+    // Show progress dialog
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setTitle(
+        "PRXY Browser Client - Installing browser components...",
+      );
+    }
+
+    try {
+      // Install Chromium browser
+      execSync("npx playwright install chromium", {
+        stdio: "inherit",
+        env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: "0" }, // Use default path
+      });
+
+      log.default.info("Playwright browser installed successfully");
+    } catch (installError) {
+      log.default.error("Failed to install Playwright browser:", installError);
+
+      const { dialog } = await import("electron");
+      await dialog.showMessageBox({
+        type: "error",
+        title: "Browser Installation Failed",
+        message: "Failed to install required browser components.",
+        detail: "Please check your internet connection and try again.",
+      });
+    }
+
+    // Reset title
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setTitle("PRXY Browser Client");
+    }
+  }
+}
 
 app.on("window-all-closed", async () => {
   // Clean up all browser connections
