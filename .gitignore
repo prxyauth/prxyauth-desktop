@@ -1,0 +1,35 @@
+node_modules
+
+# Environment files (sensitive)
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+
+# Build outputs
+dist
+release
+*.exe
+*.dmg
+*.AppImage
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+
+# TypeScript build info
+*.tsbuildinfo
+tsc-output.txt
+
+# Vite temp files
+vite.config.mts.timestamp-*
