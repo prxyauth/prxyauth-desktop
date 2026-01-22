@@ -63,7 +63,9 @@
         "provider": "s3",
         "bucket": "releases",
         "region": "us-east-1",
-        "endpoint": "https://ehplnrhjwpnbicpcyvoa.storage.supabase.co/storage/v1/s3"
+        "endpoint": "https://ehplnrhjwpnbicpcyvoa.storage.supabase.co/storage/v1/s3",
+        "pathStyle": true,
+        "acl": null
       }
     ],
     "win": {
