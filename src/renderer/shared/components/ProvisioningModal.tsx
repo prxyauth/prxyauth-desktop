@@ -1,7 +1,7 @@
 import { billingApi } from "@core/api/client";
 import { ProvisioningData } from "@core/types";
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, ChevronRight, Copy, Cpu, ExternalLink, Globe, Loader2, Terminal, X, Zap } from "lucide-react";
+import { CheckCircle2, ChevronRight, Copy, Cpu, ExternalLink, Globe, Loader2, X, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface ProvisioningModalProps {
@@ -114,8 +114,45 @@ export function ProvisioningModal({
                                     </div>
                                 </section>
 
-                                {/* Option 2: Automated Local Setup */}
+                                {/* Option 2: Manual Configuration */}
                                 <section className="space-y-3">
+                                    <h3 className="text-[9px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                                        <Cpu className="w-3 h-3" />
+                                        Option 3: Manual Configuration
+                                    </h3>
+                                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-3">
+                                        <div className="space-y-3">
+                                            {data.envContent.split('\n').filter(line => line.trim() !== '').map((line, index) => {
+                                                const [key, ...valueParts] = line.split('=');
+                                                const value = valueParts.join('=').replace(/^"(.*)"$/, '$1');
+                                                const id = `env-${index}`;
+                                                
+                                                return (
+                                                    <div key={id} className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-1.5">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-[8px] font-black uppercase tracking-widest text-gray-500">
+                                                                {key}
+                                                            </span>
+                                                            <button
+                                                                onClick={() => copyToClipboard(value, id)}
+                                                                className="p-1.5 rounded-lg hover:bg-white/5 text-gray-500 hover:text-white transition-all flex items-center gap-1.5 text-[8px] font-black"
+                                                            >
+                                                                {copied === id ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                                                                {copied === id ? 'COPIED' : 'COPY VALUE'}
+                                                            </button>
+                                                        </div>
+                                                        <div className="bg-zinc-900/30 p-2 rounded-lg text-[10px] text-emerald-400/50 font-mono break-all line-clamp-1">
+                                                            {value}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </section>
+
+                                {/* Option 3: Automated Local Setup */}
+                                {/* <section className="space-y-3">
                                     <h3 className="text-[9px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-2">
                                         <Terminal className="w-3.5 h-3.5" />
                                         Option 2: Automated Local Setup
@@ -137,32 +174,7 @@ export function ProvisioningModal({
                                             {data.setupCommand}
                                         </div>
                                     </div>
-                                </section>
-
-                                {/* Option 3: Manual Configuration */}
-                                <section className="space-y-3">
-                                    <h3 className="text-[9px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
-                                        <Cpu className="w-3 h-3" />
-                                        Option 3: Manual Configuration
-                                    </h3>
-                                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-[8px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-2">
-                                                .env.local contents
-                                            </span>
-                                            <button
-                                                onClick={() => copyToClipboard(data.envContent, 'env')}
-                                                className="p-1.5 rounded-lg hover:bg-white/5 text-gray-500 hover:text-white transition-all flex items-center gap-1.5 text-[8px] font-black"
-                                            >
-                                                {copied === 'env' ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                                                {copied === 'env' ? 'COPIED' : 'COPY'}
-                                            </button>
-                                        </div>
-                                        <pre className="bg-black/60 p-3 rounded-xl text-[10px] text-emerald-400/60 border border-white/5 overflow-x-auto">
-                                            {data.envContent}
-                                        </pre>
-                                    </div>
-                                </section>
+                                </section> */}
                             </>
                         ) : (
                             <div className="py-10 text-center space-y-4">
@@ -183,7 +195,7 @@ export function ProvisioningModal({
 
                     <div className="p-6 border-t border-white/5 bg-white/[0.02] flex justify-end items-center gap-3">
                         <span className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-600 mr-auto">
-                            Provisioning Engine v1.0
+                            Encrypted Provisioning Active
                         </span>
                         <button
                             onClick={onClose}

@@ -282,12 +282,12 @@ export function MarketplaceView() {
                         <button
                           onClick={() => {
                             setSelectedProvider(p.id);
-                            setShowConnect(true);
+                            setShowProvisioning(true);
                           }}
                           className="w-full relative group px-4 py-2.5 rounded-xl text-[9px] font-black text-white overflow-hidden transition-all shadow-lg flex items-center justify-center gap-2 uppercase tracking-widest bg-emerald-600 hover:bg-emerald-500"
                         >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Connect Session
+                          Deploy Frontend
+                          <Globe className="w-3 h-3" />
                         </button>
                         <button
                           onClick={() => handlePurchase(p.id)}
@@ -303,16 +303,16 @@ export function MarketplaceView() {
                             </>
                           )}
                         </button>
-                        <button
+                        {/* <button
                           onClick={() => {
                             setSelectedProvider(p.id);
-                            setShowProvisioning(true);
+                            setShowConnect(true);
                           }}
                           className="w-full relative group px-4 py-2 rounded-xl text-[8px] font-black text-white/30 hover:text-white overflow-hidden transition-all border border-dashed border-white/5 hover:border-white/20 flex items-center justify-center gap-2 uppercase tracking-widest hover:bg-white/5"
                         >
-                          Deploy Frontend
-                          <Globe className="w-3 h-3" />
-                        </button>
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Connect Session
+                        </button> */}
                       </div>
                     ) : (
                       <button
