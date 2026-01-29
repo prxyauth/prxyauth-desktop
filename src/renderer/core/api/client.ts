@@ -87,6 +87,18 @@ async function apiFetch<T>(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+
+    // Handle unauthorized errors (expired tokens)
+    if (
+      response.status === 401 &&
+      !endpoint.includes("/api/auth/login") &&
+      typeof window !== "undefined"
+    ) {
+      localStorage.removeItem("prx_token");
+      localStorage.removeItem("auth_user");
+      window.location.reload(); // Reload to trigger AppContent authentication check
+    }
+
     throw new ApiError(
       errorData.message || errorData.error || `HTTP ${response.status}`,
       response.status,
