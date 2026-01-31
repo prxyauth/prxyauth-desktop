@@ -541,6 +541,55 @@ async function injectFingerprint(context: any, fp: any): Promise<void> {
                 return originalToDataURL.apply(this, arguments);
             }
         } catch (e) {}
+
+        // 7. WebRTC Leak Prevention - Completely disable WebRTC APIs
+        try {
+            // Remove RTCPeerConnection completely
+            if (window.RTCPeerConnection) {
+                window.RTCPeerConnection = undefined;
+            }
+            if (window.webkitRTCPeerConnection) {
+                window.webkitRTCPeerConnection = undefined;
+            }
+            if (window.mozRTCPeerConnection) {
+                window.mozRTCPeerConnection = undefined;
+            }
+            
+            // Remove RTCDataChannel
+            if (window.RTCDataChannel) {
+                window.RTCDataChannel = undefined;
+            }
+            
+            // Remove RTCSessionDescription
+            if (window.RTCSessionDescription) {
+                window.RTCSessionDescription = undefined;
+            }
+            if (window.webkitRTCSessionDescription) {
+                window.webkitRTCSessionDescription = undefined;
+            }
+            
+            // Remove RTCIceCandidate
+            if (window.RTCIceCandidate) {
+                window.RTCIceCandidate = undefined;
+            }
+            if (window.webkitRTCIceCandidate) {
+                window.webkitRTCIceCandidate = undefined;
+            }
+            
+            // Block getUserMedia for extra protection
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia = () => Promise.reject(new Error('Permission denied'));
+            }
+            if (navigator.getUserMedia) {
+                navigator.getUserMedia = undefined;
+            }
+            if (navigator.webkitGetUserMedia) {
+                navigator.webkitGetUserMedia = undefined;
+            }
+            if (navigator.mozGetUserMedia) {
+                navigator.mozGetUserMedia = undefined;
+            }
+        } catch (e) {}
     })(${fpString});
     `;
 
@@ -1246,7 +1295,16 @@ ipcMain.handle(
 
       const browser = await chromium.launch({
         headless: false,
-        args: ["--disable-blink-features=AutomationControlled"],
+        args: [
+          "--disable-blink-features=AutomationControlled",
+          // Comprehensive WebRTC leak prevention
+          "--disable-webrtc",
+          "--disable-webrtc-encryption",
+          "--disable-webrtc-hw-decoding",
+          "--disable-webrtc-hw-encoding",
+          "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
+          "--enforce-webrtc-ip-permission-check",
+        ],
       });
 
       // Listen for browser disconnection (user closes browser directly)
