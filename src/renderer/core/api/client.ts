@@ -36,6 +36,9 @@ import {
   VncEndpoints,
   ProvisioningData,
   ProviderLicense,
+  ApiResponse,
+  CheckoutResponseData,
+  VerifyPaymentResponse,
 } from "../types";
 
 // ============================================================================
@@ -579,11 +582,48 @@ export const billingApi = {
   checkout: async (data: {
     provider: string;
     durationMonths?: number;
-  }): Promise<{ success: boolean; message: string }> => {
-    return apiFetch("/api/billing/checkout", {
-      method: "POST",
-      body: data,
-    });
+    paymentMethod?: string;
+  }): Promise<ApiResponse<CheckoutResponseData>> => {
+    return apiFetch<ApiResponse<CheckoutResponseData>>(
+      "/api/billing/checkout",
+      {
+        method: "POST",
+        body: data,
+      },
+    );
+  },
+
+  getTransaction: async (
+    id: string,
+  ): Promise<
+    ApiResponse<
+      CheckoutResponseData & {
+        status: string;
+        amount: number;
+        provider: string;
+      }
+    >
+  > => {
+    return apiFetch<
+      ApiResponse<
+        CheckoutResponseData & {
+          status: string;
+          amount: number;
+          provider: string;
+        }
+      >
+    >(`/api/billing/transaction/${id}`);
+  },
+
+  /**
+   * Manually verify a payment status
+   */
+  verifyPayment: async (
+    transactionId: string,
+  ): Promise<VerifyPaymentResponse> => {
+    return apiFetch<VerifyPaymentResponse>(
+      `/api/billing/verify-payment/${transactionId}`,
+    );
   },
 
   /**

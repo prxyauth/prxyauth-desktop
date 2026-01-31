@@ -225,6 +225,20 @@ export interface ProviderLicense {
   expiresAt: string;
 }
 
+export interface CheckoutResponseData {
+  paymentUrl: string;
+  invoiceId: string;
+  transactionId: string;
+  provider?: string;
+  expiresAt?: string;
+}
+
+export interface VerifyPaymentResponse {
+  success: boolean;
+  status: "paid" | "pending" | "failed" | "expired";
+  amountPaid?: number;
+}
+
 // ============================================================================
 // API Key Types
 // ============================================================================

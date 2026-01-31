@@ -72,7 +72,11 @@ const PROVIDERS = [
   },
 ];
 
-export function MarketplaceView() {
+interface MarketplaceViewProps {
+  onNavigateToPayment: (transactionId: string) => void;
+}
+
+export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
   const { subscriptions, refresh: fetchLicenses } = useSubscriptions();
   const [isPurchasing, setIsPurchasing] = useState<string | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
@@ -82,15 +86,22 @@ export function MarketplaceView() {
   const handlePurchase = async (p: string) => {
     try {
       setIsPurchasing(p);
+
       const response = await billingApi.checkout({
         provider: p,
         durationMonths: 1,
+        paymentMethod: "tron", // Always use TRON by default
       });
-      if (response.success && (response as any).data?.paymentUrl) {
-        // In Electron, we open in a new browser window
-        window.open((response as any).data.paymentUrl, "_blank");
-      } else if (response.success) {
-        await fetchLicenses();
+
+      if (response.success && response.data) {
+        if (response.data.paymentUrl.startsWith("tron:")) {
+          onNavigateToPayment(response.data.transactionId);
+        } else if (response.data.paymentUrl) {
+          // In Electron, we open in a new browser window for external URLs
+          window.open(response.data.paymentUrl, "_blank");
+        } else {
+          await fetchLicenses();
+        }
       }
     } catch (err) {
       console.error("Purchase failed", err);
