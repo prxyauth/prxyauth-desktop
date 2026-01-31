@@ -59,8 +59,16 @@ export interface Fingerprint {
     renderer: string;
   };
 
+  // Geolocation (matches proxy country)
+  geolocation?: {
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+  };
+
   // Internal
   seed: string;
+  proxyIp?: string;
 }
 
 export type BrowserMode = "playwright" | "gologin" | "browserless";
