@@ -3,7 +3,6 @@
  * Manages the application window and Playwright browser connections
  */
 
-import "./env";
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import * as path from "path";
 import type { Browser, BrowserContext, Page } from "playwright-core";
@@ -11,6 +10,7 @@ import { chromium } from "playwright-core"; // We'll keep this but the require i
 import * as ProxyChain from "proxy-chain";
 import { initAutoUpdater } from "./auto-updater";
 import { BrowserManager } from "./browser-manager";
+import "./env";
 
 // Keep a global reference of the window object
 let mainWindow: BrowserWindow | null = null;

@@ -1,13 +1,13 @@
-import { useState } from "react";
 import { AuthProvider } from "@features/auth/context/AuthContext";
-import { SessionProvider } from "@features/sessions/context/SessionContext";
 import { useAuth } from "@features/auth/hooks/useAuth";
 import { LoginView } from "@features/auth/LoginView";
 import { RegisterView } from "@features/auth/RegisterView";
+import { BrowserSetupView } from "@features/browser-setup/BrowserSetupView";
+import { useBrowserStatus } from "@features/browser-setup/hooks/useBrowserStatus";
+import { SessionProvider } from "@features/sessions/context/SessionContext";
 import { MainLayout } from "@shared/components/layout/MainLayout";
 import { AnimatePresence, motion } from "framer-motion";
-import { useBrowserStatus } from "@features/browser-setup/hooks/useBrowserStatus";
-import { BrowserSetupView } from "@features/browser-setup/BrowserSetupView";
+import { useState } from "react";
 
 function AppContent() {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();

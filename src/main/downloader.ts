@@ -1,8 +1,8 @@
 import { net } from "electron";
-import * as fs from "fs";
-import * as path from "path";
-import * as os from "os";
 import log from "electron-log";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 const extract = require("extract-zip");
 
 export interface ComponentProgress {

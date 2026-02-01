@@ -1,6 +1,6 @@
 import { app } from "electron";
-import path from "path";
 import fs from "fs";
+import path from "path";
 
 // Determine and ensure the browsers path exists
 const BROWSERS_PATH = path.join(app.getPath("userData"), "browsers");

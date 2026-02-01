@@ -1,7 +1,7 @@
-import { app, ipcMain, BrowserWindow } from "electron";
-import path from "path";
-import fs from "fs";
+import { app, BrowserWindow, ipcMain } from "electron";
 import log from "electron-log";
+import fs from "fs";
+import path from "path";
 import { ParallelDownloader, ParallelProgress } from "./downloader";
 
 export class BrowserManager {
