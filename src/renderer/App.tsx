@@ -6,10 +6,33 @@ import { LoginView } from "@features/auth/LoginView";
 import { RegisterView } from "@features/auth/RegisterView";
 import { MainLayout } from "@shared/components/layout/MainLayout";
 import { AnimatePresence, motion } from "framer-motion";
+import { useBrowserStatus } from "@features/browser-setup/hooks/useBrowserStatus";
+import { BrowserSetupView } from "@features/browser-setup/BrowserSetupView";
 
 function AppContent() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const {
+    status: browserStatus,
+    error: browserError,
+    retry,
+  } = useBrowserStatus();
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
+
+  const isLoading = isAuthLoading || !browserStatus;
+  const isBrowserLoading =
+    browserStatus &&
+    (!browserStatus.isInstalled || browserStatus.isDownloading);
+
+  if (isBrowserLoading) {
+    return (
+      <BrowserSetupView
+        progress={browserStatus?.progress?.percent || 0}
+        message={browserStatus?.progress?.message}
+        error={browserError}
+        onRetry={retry}
+      />
+    );
+  }
 
   if (isLoading) {
     return (
@@ -34,7 +57,7 @@ function AppContent() {
             transition={{ duration: 0.3 }}
           >
             <LoginView
-              onLoginSuccess={() => { }}
+              onLoginSuccess={() => {}}
               onSwitchToRegister={() => setAuthMode("register")}
             />
           </motion.div>
@@ -47,7 +70,7 @@ function AppContent() {
             transition={{ duration: 0.3 }}
           >
             <RegisterView
-              onRegisterSuccess={() => { }}
+              onRegisterSuccess={() => {}}
               onSwitchToLogin={() => setAuthMode("login")}
             />
           </motion.div>
