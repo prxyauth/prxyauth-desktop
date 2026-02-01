@@ -6,6 +6,7 @@ import { billingApi } from "@core/api/client";
 import { cn } from "@core/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Activity,
   ArrowLeft,
   CheckCircle2,
   ChevronRight,
@@ -16,9 +17,7 @@ import {
   Loader2,
   Mail,
   ShieldCheck,
-  ShoppingBag,
   Star,
-  Zap,
 } from "lucide-react";
 import { useState } from "react";
 import { ProvisioningModal } from "../../shared/components/ProvisioningModal";
@@ -119,62 +118,97 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
 
   return (
     <div className="max-w-7xl mx-auto space-y-12 pb-20 p-4">
-      {/* Hero Header */}
-      <section className="text-center space-y-4 pt-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/5 border border-primary/10 text-primary text-[10px] font-black uppercase tracking-widest mb-2"
-        >
-          <ShoppingBag className="w-3.5 h-3.5" />
-          The Infrastructure Marketplace
-        </motion.div>
+      {/* Hero Section */}
+      <div className="relative mb-16">
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none" />
 
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase"
-        >
-          Expand Your <span className="text-primary italic">Network</span>
-        </motion.h1>
+        <div className="relative flex flex-col items-center text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8 backdrop-blur-md"
+          >
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">
+              Infrastructure Pool Active
+            </span>
+          </motion.div>
 
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="text-gray-500 max-w-2xl mx-auto text-xs font-medium leading-relaxed"
-        >
-          Purchase enterprise-grade automation licenses and deploy secure
-          browser workers. Each provider is isolated and uses proprietary
-          encryption.
-        </motion.p>
-      </section>
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-5xl md:text-6xl font-black text-white tracking-tighter uppercase mb-6"
+          >
+            Cloud <span className="text-primary italic">Marketplace</span>
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-gray-500 max-w-2xl text-[11px] font-black uppercase tracking-[0.3em] leading-relaxed"
+          >
+            Deploy enterprise-grade infrastructure nodes across global regions
+            with automated provisioning and stealth optimization.
+          </motion.p>
+        </div>
+      </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-16">
         {[
-          { icon: Globe, label: "Global Nodes", val: "1.2k+" },
-          { icon: Zap, label: "Avg Latency", val: "45ms" },
-          { icon: ShieldCheck, label: "Security Score", val: "99.9%" },
-          { icon: Clock, label: "Uptime", val: "24/7" },
-        ].map((s, i) => (
+          {
+            label: "Active Nodes",
+            value: "24/7",
+            icon: Activity,
+            color: "text-emerald-400",
+          },
+          {
+            label: "Infrastructure",
+            value: "Premium",
+            icon: Globe,
+            color: "text-primary",
+          },
+          {
+            label: "Mesh Network",
+            value: "Stealth",
+            icon: ShieldCheck,
+            color: "text-amber-400",
+          },
+        ].map((stat, idx) => (
           <motion.div
-            key={i}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3 + i * 0.05 }}
-            className="glass-container p-4 rounded-3xl flex flex-col items-center justify-center text-center gap-1 border border-white/5"
+            key={idx}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.1 }}
+            className="glass-container rounded-[32px] p-8 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-500 border-white/5"
           >
-            <s.icon className="w-4 h-4 text-primary/60 mb-1" />
-            <span className="text-lg font-black text-white">{s.val}</span>
-            <span className="text-[8px] font-black uppercase tracking-widest text-gray-500">
-              {s.label}
-            </span>
+            <div
+              className={cn(
+                "absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity",
+                stat.color,
+              )}
+            >
+              <stat.icon className="w-16 h-16" />
+            </div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-3 ml-0.5">
+              {stat.label}
+            </p>
+            <div className="flex items-center gap-3">
+              <span
+                className={cn(
+                  "text-4xl font-black tracking-tighter",
+                  stat.color,
+                )}
+              >
+                {stat.value}
+              </span>
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
+            </div>
           </motion.div>
         ))}
       </div>
-
       {/* Your Subscriptions Section */}
       {subscriptions.length > 0 && !showConnect && (
         <section className="space-y-6">
@@ -207,7 +241,7 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
       )}
 
       {/* Provider Marketplace */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <AnimatePresence mode="wait">
           {!showConnect ? (
             PROVIDERS.map((p, idx) => {
@@ -222,117 +256,107 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ delay: idx * 0.1 }}
                   className={cn(
-                    "relative group glass-container rounded-[32px] p-6 flex flex-col h-full border border-white/5 hover:border-primary/20 transition-all duration-500",
+                    "relative group glass-container rounded-[40px] p-8 flex flex-col h-full border border-white/5 hover:border-primary/20 transition-all duration-500 overflow-hidden",
                     p.popular &&
                       !isLicensed &&
-                      "border-primary/20 bg-primary/5",
+                      "border-primary/30 bg-primary/2",
                     isLicensed &&
-                      "border-emerald-500/30 bg-emerald-500/5 shadow-[0_0_30px_rgba(16,185,129,0.1)]",
+                      "border-emerald-500/30 bg-emerald-500/5 shadow-[0_0_40px_rgba(16,185,129,0.1)]",
                   )}
                 >
                   {isLicensed && (
-                    <div className="absolute top-4 right-4">
-                      <div className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[7.5px] font-black uppercase tracking-widest flex items-center gap-1 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
-                        <ShieldCheck className="w-2.5 h-2.5" />
-                        PRO
+                    <div className="absolute top-6 right-6">
+                      <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                        <ShieldCheck className="w-3 h-3" />
+                        PRO License
                       </div>
                     </div>
                   )}
 
                   {p.popular && !isLicensed && (
-                    <div className="absolute top-4 right-4">
-                      <div className="px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[7.5px] font-black uppercase tracking-widest flex items-center gap-1 shadow-[0_0_10px_rgba(129,140,248,0.2)]">
-                        <Star className="w-2.5 h-2.5 fill-primary" />
-                        POPULAR
+                    <div className="absolute top-6 right-6">
+                      <div className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-[0_0_15px_rgba(129,140,248,0.2)]">
+                        <Star className="w-3 h-3 fill-primary" />
+                        Most Popular
                       </div>
                     </div>
                   )}
 
                   {/* Icon & Title */}
-                  <div className="mb-6">
+                  <div className="mb-8">
                     <div
                       className={cn(
-                        "w-12 h-12 rounded-2xl border flex items-center justify-center mb-4 transition-all group-hover:scale-110",
+                        "w-16 h-16 rounded-3xl border flex items-center justify-center mb-6 transition-all group-hover:scale-110 group-hover:rotate-3",
                         isLicensed
                           ? `bg-${p.color}/10 border-${p.color}/30 text-${p.color}`
                           : "bg-white/5 border-white/10 text-gray-500",
                       )}
                     >
-                      <p.icon className="w-6 h-6" />
+                      <p.icon className="w-8 h-8" />
                     </div>
-                    <h3 className="text-xl font-black text-white uppercase tracking-tight">
+                    <h3 className="text-2xl font-black text-white uppercase tracking-tight mb-1">
                       {p.name}
                     </h3>
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
                       {p.tagline}
                     </p>
                   </div>
 
-                  {/* Description */}
-                  <p className="text-xs text-gray-400 font-medium leading-relaxed mb-4">
-                    {p.description}
-                  </p>
-
-                  {/* Features */}
-                  <ul className="flex-1 space-y-2 mb-8">
-                    {p.features.map((f, i) => (
-                      <li
-                        key={i}
-                        className="flex items-center gap-2 text-[10px] text-gray-400 font-medium"
-                      >
-                        <CheckCircle2 className="w-3 h-3 text-emerald-500/60" />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
+                  {/* Description & Features */}
+                  <div className="flex-1 space-y-6 mb-10">
+                    <p className="text-sm text-gray-400 font-medium leading-relaxed">
+                      {p.description}
+                    </p>
+                    <ul className="space-y-3">
+                      {p.features.map((f, i) => (
+                        <li
+                          key={i}
+                          className="flex items-center gap-3 text-xs text-gray-400 font-medium"
+                        >
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500/60" />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
                   {/* Controls */}
-                  <div className="mt-auto space-y-2">
+                  <div className="mt-auto space-y-3">
                     {isLicensed ? (
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-col gap-3">
                         <button
                           onClick={() => {
                             setSelectedProvider(p.id);
                             setShowProvisioning(true);
                           }}
-                          className="w-full relative group px-4 py-2.5 rounded-xl text-[9px] font-black text-white overflow-hidden transition-all shadow-lg flex items-center justify-center gap-2 uppercase tracking-widest bg-emerald-600 hover:bg-emerald-500"
+                          className="w-full relative group px-6 py-4 rounded-2xl text-[11px] font-black text-white overflow-hidden transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest bg-emerald-600 hover:bg-emerald-500"
                         >
                           Deploy Frontend
-                          <Globe className="w-3 h-3" />
+                          <Globe className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handlePurchase(p.id)}
                           disabled={isPurchasing === p.id}
-                          className="w-full relative group px-4 py-2 rounded-xl text-[8px] font-black text-white/50 hover:text-white transition-all border border-white/5 hover:border-white/10 flex items-center justify-center gap-2 uppercase tracking-widest bg-white/5 hover:bg-white/10 disabled:opacity-50"
+                          className="w-full relative group px-6 py-3 rounded-2xl text-[9px] font-black text-white/60 hover:text-white overflow-hidden transition-all border border-white/5 hover:border-white/10 flex items-center justify-center gap-2 uppercase tracking-widest bg-white/5 hover:bg-white/10 disabled:opacity-50"
                         >
                           {isPurchasing === p.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
                             <>
-                              Renew License
-                              <Clock className="w-3 h-3" />
+                              Renew / Extend License
+                              <Clock className="w-3.5 h-3.5" />
                             </>
                           )}
                         </button>
-                        {/* <button
-                          onClick={() => {
-                            setSelectedProvider(p.id);
-                            setShowConnect(true);
-                          }}
-                          className="w-full relative group px-4 py-2 rounded-xl text-[8px] font-black text-white/30 hover:text-white overflow-hidden transition-all border border-dashed border-white/5 hover:border-white/20 flex items-center justify-center gap-2 uppercase tracking-widest hover:bg-white/5"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Connect Session
-                        </button> */}
                       </div>
                     ) : (
                       <button
                         onClick={() => handlePurchase(p.id)}
                         disabled={isPurchasing === p.id}
-                        className="w-full relative group px-4 py-3 rounded-xl text-[10px] font-black text-white overflow-hidden transition-all shadow-lg flex items-center justify-center gap-2 uppercase tracking-widest bg-primary hover:bg-primary/80 disabled:opacity-50"
+                        className="w-full relative group px-6 py-5 rounded-2xl text-[11px] font-black text-white overflow-hidden transition-all shadow-2xl flex items-center justify-center gap-3 uppercase tracking-widest bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-95 group disabled:opacity-50"
                       >
                         {isPurchasing === p.id ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <>
                             Buy License

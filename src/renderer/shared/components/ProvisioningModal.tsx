@@ -1,12 +1,12 @@
 import { billingApi } from "@core/api/client";
 import { ProvisioningData } from "@core/types";
+import { cn } from "@core/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   CheckCircle2,
   ChevronRight,
   Copy,
   Cpu,
-  ExternalLink,
   Globe,
   Loader2,
   X,
@@ -31,6 +31,7 @@ export function ProvisioningModal({
   const [data, setData] = useState<ProvisioningData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
+  const [userForkUrl, setUserForkUrl] = useState("");
 
   useEffect(() => {
     if (isOpen && providerId) {
@@ -55,6 +56,8 @@ export function ProvisioningModal({
     setCopied(id);
     setTimeout(() => setCopied(null), 2000);
   };
+
+  if (!isOpen) return null;
 
   return createPortal(
     <AnimatePresence>
@@ -109,36 +112,70 @@ export function ProvisioningModal({
                 </div>
               ) : data ? (
                 <>
-                  {/* Option 1: Vercel One-Click */}
+                  {/* Production Deployment (via Forking) */}
                   <section className="space-y-3">
                     <h3 className="text-[9px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                       <Zap className="w-3 h-3 fill-primary" />
-                      Option 1: Production Deployment
+                      Production Deployment
                     </h3>
                     <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3 shadow-inner">
                       <p className="text-xs text-gray-300 font-medium leading-relaxed">
-                        The fastest way to deploy. We'll automatically clone the
-                        template to your Vercel account and pre-fill all
-                        necessary environment variables.
+                        Fork the repository to your GitHub account first, then
+                        import to Vercel. This allows you to sync with upstream
+                        updates.
                       </p>
-                      <button
-                        onClick={() =>
-                          window.open(data.vercelDeployUrl, "_blank")
-                        }
-                        className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white text-black text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all shadow-xl active:scale-95 group"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        Deploy to Vercel
-                        <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                      </button>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <label className="text-[8px] font-black uppercase tracking-widest text-primary/70 ml-1">
+                            Paste your Fork URL (Required for Step 2)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="https://github.com/your-username/repo"
+                            value={userForkUrl}
+                            onChange={(e) => setUserForkUrl(e.target.value)}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white placeholder:text-white/20 focus:outline-none focus:border-primary/50 transition-colors font-mono"
+                          />
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() =>
+                              window.open(data.githubForkUrl, "_blank")
+                            }
+                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800 text-white text-[10px] font-black uppercase tracking-widest hover:bg-zinc-700 transition-all shadow-lg active:scale-95 group border border-white/10"
+                          >
+                            <span className="text-[8px]">1.</span>
+                            Fork on GitHub
+                            <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (!userForkUrl) return;
+                              const url = `${data.vercelImportUrl}&s=${encodeURIComponent(userForkUrl.trim())}`;
+                              window.open(url, "_blank");
+                            }}
+                            className={cn(
+                              "inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 group border",
+                              userForkUrl
+                                ? "bg-white text-black hover:bg-primary border-white/10"
+                                : "bg-zinc-800/50 text-white/30 cursor-not-allowed border-white/5",
+                            )}
+                          >
+                            <span className="text-[8px]">2.</span>
+                            Import to Vercel
+                            <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </section>
 
-                  {/* Option 2: Manual Configuration */}
+                  {/* Add environment variables */}
                   <section className="space-y-3">
                     <h3 className="text-[9px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
                       <Cpu className="w-3 h-3" />
-                      Option 3: Manual Configuration
+                      Add environment variables
                     </h3>
                     <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-3">
                       <div className="space-y-3">

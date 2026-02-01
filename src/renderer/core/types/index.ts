@@ -208,6 +208,8 @@ export interface LoginRequest {
 
 export interface ProvisioningData {
   provider: string;
+  vercelImportUrl: string;
+  githubForkUrl: string;
   vercelDeployUrl: string;
   setupCommand: string;
   envContent: string;
