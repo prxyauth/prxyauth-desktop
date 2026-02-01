@@ -320,6 +320,7 @@ async function prepareProxy(
 /**
  * Advanced Fingerprint Injection
  * Synchronizes browser properties with the target identity
+ * Based on be-prxyauth FingerprintInjector for maximum stealth
  */
 async function injectFingerprint(context: any, fp: any): Promise<void> {
   if (!fp) return;
@@ -327,15 +328,34 @@ async function injectFingerprint(context: any, fp: any): Promise<void> {
   const fpString = JSON.stringify(fp);
   const scriptContent = `
     (function(fp) {
-        const seed = fp.sessionId || 'default';
+        const seed = fp.sessionId || fp.seed || 'default';
+        
+        // Advanced PRNG to get stable noise per session (cyrb128 + mulberry32)
+        const cyrb128 = (str) => {
+            let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;
+            for (let i = 0, k; i < str.length; i++) {
+                k = str.charCodeAt(i);
+                h1 = h2 ^ Math.imul(h1 ^ k, 597399067);
+                h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
+                h3 = h4 ^ Math.imul(h3 ^ k, 951274213);
+                h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);
+            }
+            h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);
+            h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
+            h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
+            h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
+            return [(h1 === 0 ? 1 : h1) >>> 0, (h2 === 0 ? 1 : h2) >>> 0, (h3 === 0 ? 1 : h3) >>> 0, (h4 === 0 ? 1 : h4) >>> 0];
+        };
+        
         const mulberry32 = (a) => () => {
             let t = a += 0x6D2B79F5;
             t = Math.imul(t ^ t >>> 15, t | 1);
             t ^= t + Math.imul(t ^ t >>> 7, t | 61);
             return ((t ^ t >>> 14) >>> 0) / 4294967296;
         };
-        const hash = Array.from(seed).reduce((s, c) => Math.imul(31, s) + c.charCodeAt(0) | 0, 0);
-        const rand = mulberry32(hash || 1);
+        
+        const hashes = cyrb128(seed);
+        const rand = mulberry32(hashes[0]);
 
         const patch = (obj, prop, value) => {
             if (value === undefined || value === null) return;
@@ -354,6 +374,7 @@ async function injectFingerprint(context: any, fp: any): Promise<void> {
         // 1. Navigator & Hardware
         patch(navigator, 'hardwareConcurrency', fp.hardwareConcurrency || 8);
         patch(navigator, 'deviceMemory', fp.deviceMemory || 8);
+        patch(navigator, 'maxTouchPoints', fp.maxTouchPoints || 0);
         patch(navigator, 'userAgent', fp.userAgent);
         patch(navigator, 'appVersion', fp.userAgent.replace("Mozilla/", ""));
         patch(navigator, 'vendor', 'Google Inc.');
@@ -361,8 +382,8 @@ async function injectFingerprint(context: any, fp: any): Promise<void> {
         patch(navigator, 'language', fp.language || 'en-US');
         patch(navigator, 'languages', [fp.language || 'en-US', (fp.language || 'en-US').split("-")[0]]);
         
-        // Match platform to UA (Priority: Explicit Platform -> UA Mapping -> Win32)
-        let platform = fp.platform;
+        // Match platform to UA
+        let platform = fp.platform || fp.legacyPlatform;
         if (!platform || platform === 'Win32' && fp.userAgent.includes("Mac")) {
             platform = fp.userAgent.includes("Mac") ? "MacIntel" : 
                        fp.userAgent.includes("Linux") ? "Linux x86_64" : "Win32";
@@ -389,8 +410,19 @@ async function injectFingerprint(context: any, fp: any): Promise<void> {
             } catch (e) {}
         }
         
-        // Webdriver bypass
-        patch(proto, 'webdriver', false);
+        // Webdriver bypass (hardened)
+        try {
+            const newProto = Object.getPrototypeOf(navigator);
+            const getter = () => false;
+            Object.defineProperty(getter, 'name', { value: 'get webdriver', configurable: true });
+            Object.defineProperty(getter, 'toString', { value: () => 'function get webdriver() { [native code] }', configurable: true });
+            
+            Object.defineProperty(newProto, 'webdriver', {
+                get: getter,
+                enumerable: true,
+                configurable: true
+            });
+        } catch (e) {}
 
         if (fp.userAgentMetadata) {
             const platformName = fp.userAgent.includes("Mac") ? "macOS" : 
@@ -456,14 +488,20 @@ async function injectFingerprint(context: any, fp: any): Promise<void> {
             patch(navigator, 'mimeTypes', mockMimeTypes);
         } catch (e) {}
 
-        // 3. Permissions Alignment
+        // 3. Screen Alignment
+        if (fp.screen) {
+            const screenProps = ['width', 'height', 'availWidth', 'availHeight', 'colorDepth', 'pixelDepth'];
+            screenProps.forEach(prop => patch(screen, prop, fp.screen[prop]));
+        }
+
+        // 4. Permissions Alignment
         try {
             const origQuery = navigator.permissions.query;
             navigator.permissions.query = (desc) => {
                 if (desc.name === 'notifications' || desc.name === 'geolocation' || desc.name === 'push') {
                     return Promise.resolve({ 
                         name: desc.name,
-                        state: 'prompt', 
+                        state: desc.name === 'geolocation' ? 'granted' : 'prompt', 
                         onchange: null,
                         addEventListener: () => {},
                         removeEventListener: () => {},
@@ -474,7 +512,7 @@ async function injectFingerprint(context: any, fp: any): Promise<void> {
             };
         } catch (e) {}
 
-        // 4. Chrome API Mocking
+        // 5. Chrome API Mocking
         try {
             if (!window.chrome) {
                 const now = Date.now();
@@ -509,7 +547,7 @@ async function injectFingerprint(context: any, fp: any): Promise<void> {
             }
         } catch (e) {}
 
-        // 5. WebGL Consistency
+        // 6. WebGL Consistency
         if (fp.webgl) {
             try {
                 const originalGetContext = HTMLCanvasElement.prototype.getContext;
@@ -530,7 +568,7 @@ async function injectFingerprint(context: any, fp: any): Promise<void> {
             } catch (e) {}
         }
 
-        // 6. Stable Canvas Noise
+        // 7. Stable Canvas Noise
         try {
             const noiseX = Math.floor(rand() * 10);
             const noiseY = Math.floor(rand() * 10);
@@ -538,59 +576,95 @@ async function injectFingerprint(context: any, fp: any): Promise<void> {
             HTMLCanvasElement.prototype.toDataURL = function() {
                 const ctx = this.getContext('2d');
                 if (ctx) {
-                    ctx.fillStyle = "rgba(255, 255, 255, 0.001)";
+                    ctx.fillStyle = "rgba(255, 255, 255, 0.01)";
                     ctx.fillRect(noiseX, noiseY, 1, 1);
                 }
                 return originalToDataURL.apply(this, arguments);
             }
+            
+            const originalGetImageData = CanvasRenderingContext2D.prototype.getImageData;
+            CanvasRenderingContext2D.prototype.getImageData = function () {
+                const res = originalGetImageData.apply(this, arguments);
+                res.data[noiseX % 4] ^= 1;
+                return res;
+            };
         } catch (e) {}
 
-        // 7. WebRTC Leak Prevention - Completely disable WebRTC APIs
+        // 8. Audio Noise
         try {
-            // Remove RTCPeerConnection completely
-            if (window.RTCPeerConnection) {
-                window.RTCPeerConnection = undefined;
+            const originalGetChannelData = AudioBuffer.prototype.getChannelData;
+            AudioBuffer.prototype.getChannelData = function () {
+                const data = originalGetChannelData.apply(this, arguments);
+                data[0] += (rand() * 0.00000001);
+                return data;
+            };
+        } catch (e) {}
+
+        // 9. FIDO & Credentials Bypass (look like real browser without passkeys)
+        try {
+            if (window.PublicKeyCredential) {
+                window.PublicKeyCredential.isConditionalMediationAvailable = () => Promise.resolve(false);
+                window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable = () => Promise.resolve(false);
             }
-            if (window.webkitRTCPeerConnection) {
-                window.webkitRTCPeerConnection = undefined;
+
+            if (navigator.credentials) {
+                if (navigator.credentials.create) {
+                    const origCreate = navigator.credentials.create;
+                    navigator.credentials.create = function (options) {
+                        if (options && options.publicKey) {
+                            return Promise.reject(new DOMException("The operation is not supported.", "NotSupportedError"));
+                        }
+                        return origCreate.apply(this, arguments);
+                    };
+                }
+
+                if (navigator.credentials.get) {
+                    const origGet = navigator.credentials.get;
+                    navigator.credentials.get = function (...args) {
+                        const options = args[0];
+                        if (options && options.publicKey) {
+                            return Promise.reject(new DOMException("User cancelled the operation", "NotAllowedError"));
+                        }
+                        return origGet.apply(this, args);
+                    };
+                }
             }
-            if (window.mozRTCPeerConnection) {
-                window.mozRTCPeerConnection = undefined;
-            }
+        } catch (e) {}
+
+        // 10. WebRTC IP Masking (Prevent real IP leak through RTC candidates)
+        try {
+            const OriginalRTCPeerConnection = window.RTCPeerConnection;
             
-            // Remove RTCDataChannel
-            if (window.RTCDataChannel) {
-                window.RTCDataChannel = undefined;
-            }
-            
-            // Remove RTCSessionDescription
-            if (window.RTCSessionDescription) {
-                window.RTCSessionDescription = undefined;
-            }
-            if (window.webkitRTCSessionDescription) {
-                window.webkitRTCSessionDescription = undefined;
-            }
-            
-            // Remove RTCIceCandidate
-            if (window.RTCIceCandidate) {
-                window.RTCIceCandidate = undefined;
-            }
-            if (window.webkitRTCIceCandidate) {
-                window.webkitRTCIceCandidate = undefined;
-            }
-            
-            // Block getUserMedia for extra protection
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia = () => Promise.reject(new Error('Permission denied'));
-            }
-            if (navigator.getUserMedia) {
-                navigator.getUserMedia = undefined;
-            }
-            if (navigator.webkitGetUserMedia) {
-                navigator.webkitGetUserMedia = undefined;
-            }
-            if (navigator.mozGetUserMedia) {
-                navigator.mozGetUserMedia = undefined;
+            if (OriginalRTCPeerConnection && fp.proxyIp) {
+                window.RTCPeerConnection = function(config) {
+                    const pc = new OriginalRTCPeerConnection(config);
+                    const originalAddIceCandidate = pc.addIceCandidate.bind(pc);
+                    
+                    pc.addIceCandidate = function(candidate) {
+                        if (candidate && candidate.candidate) {
+                            const maskedCandidate = candidate.candidate.replace(/((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/g, fp.proxyIp);
+                            return originalAddIceCandidate({ ...candidate, candidate: maskedCandidate });
+                        }
+                        return originalAddIceCandidate(candidate);
+                    };
+                    
+                    const originalOnIceCandidate = Object.getOwnPropertyDescriptor(RTCPeerConnection.prototype, 'onicecandidate');
+                    Object.defineProperty(pc, 'onicecandidate', {
+                        set: function(fn) {
+                            const wrappedFn = function(event) {
+                                if (event.candidate && event.candidate.candidate) {
+                                    const maskedCandidate = event.candidate.candidate.replace(/((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/g, fp.proxyIp);
+                                    event = { ...event, candidate: { ...event.candidate, candidate: maskedCandidate } };
+                                }
+                                return fn.apply(this, [event]);
+                            };
+                            return originalOnIceCandidate.set.apply(this, [wrappedFn]);
+                        }
+                    });
+
+                    return pc;
+                };
+                window.RTCPeerConnection.prototype = OriginalRTCPeerConnection.prototype;
             }
         } catch (e) {}
     })(${fpString});
@@ -1296,18 +1370,22 @@ ipcMain.handle(
       // Prepare proxy (returns object with server, username, password)
       const proxyConfig = await prepareProxy(sessionId, proxy);
 
+      const locale = fingerprint?.language || "en-US";
+
       const browser = await chromium.launch({
         executablePath: BrowserManager.getInstance().getExecutablePath(),
         headless: false,
         args: [
           "--disable-blink-features=AutomationControlled",
-          // Comprehensive WebRTC leak prevention
-          "--disable-webrtc",
-          "--disable-webrtc-encryption",
-          "--disable-webrtc-hw-decoding",
-          "--disable-webrtc-hw-encoding",
-          "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
-          "--enforce-webrtc-ip-permission-check",
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-infobars",
+          "--window-position=0,0",
+          "--no-first-run",
+          "--no-default-browser-check",
+          `--lang=${locale}`,
+          `--accept-lang=${locale}`,
         ],
       });
 
@@ -1326,28 +1404,44 @@ ipcMain.handle(
       });
 
       const context = await browser.newContext({
-        storageState: storageState,
-        // Use the proxy object (bridge or native auth)
-        proxy: proxyConfig,
+        storageState: storageState || undefined,
+        viewport: fingerprint?.viewport || { width: 1280, height: 720 },
         userAgent: fingerprint?.userAgent,
-        timezoneId: fingerprint?.timezoneId,
-        viewport: fingerprint?.viewport,
-        screen: fingerprint?.screen,
-        deviceScaleFactor: fingerprint?.deviceScaleFactor,
-        isMobile: fingerprint?.isMobile,
-        hasTouch: fingerprint?.hasTouch,
-        locale: fingerprint?.language || "en-US",
+        deviceScaleFactor: fingerprint?.deviceScaleFactor || 1,
+        isMobile: fingerprint?.isMobile || false,
+        hasTouch: fingerprint?.hasTouch || false,
+        locale: locale,
+        timezoneId: fingerprint?.timezoneId || "America/New_York",
         geolocation: fingerprint?.geolocation,
         permissions: ["geolocation"],
+        extraHTTPHeaders: {
+          "Accept-Language": `${locale},${locale.split("-")[0]};q=0.9,en;q=0.8`,
+        },
+        proxy: proxyConfig
+          ? {
+              server: proxyConfig.server,
+              username: proxyConfig.username,
+              password: proxyConfig.password,
+            }
+          : undefined,
         bypassCSP: true,
         ignoreHTTPSErrors: true,
       });
 
-      // Inject advanced fingerprinting fixes
-      await injectFingerprint(context, {
-        ...fingerprint,
-        sessionId: sessionId,
-      });
+      // [DETECTION BYPASS] Google detection of browser tampering is extremely aggressive.
+      // We skip JS-based fingerprint injection for Google to favor native browser properties.
+      const isGoogle =
+        session?.provider === "google" ||
+        session?.email?.toLowerCase().endsWith("@gmail.com") ||
+        session?.email?.toLowerCase().endsWith("@googlemail.com");
+
+      if (!isGoogle) {
+        await injectFingerprint(context, {
+          ...fingerprint,
+          proxyIp: proxy?.externalIp,
+          sessionId: sessionId,
+        });
+      }
 
       const page = await context.newPage();
 

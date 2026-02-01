@@ -19,20 +19,72 @@ interface PageInfo {
 }
 
 interface Fingerprint {
+  // Core Identity
   userAgent?: string;
-  timezoneId?: string;
+  userAgentMetadata?: {
+    brands: { brand: string; version: string }[];
+    fullVersionList: { brand: string; version: string }[];
+    mobile: boolean;
+    model: string;
+    platform: string;
+    platformVersion: string;
+    architecture: string;
+    bitness: string;
+  };
+  legacyPlatform?: string;
+  platform?: string;
+
+  // Environment
+  screen?: {
+    width: number;
+    height: number;
+    availWidth: number;
+    availHeight: number;
+    colorDepth: number;
+    pixelDepth: number;
+  };
   viewport?: { width: number; height: number };
-  screen?: { width: number; height: number };
   deviceScaleFactor?: number;
+
+  // Capabilities
+  hardwareConcurrency?: number;
+  deviceMemory?: number;
+  maxTouchPoints?: number;
   isMobile?: boolean;
   hasTouch?: boolean;
+
+  // Locale / Region
+  language?: string;
+  timezoneId?: string;
+
+  // Graphics
+  webgl?: {
+    vendor: string;
+    renderer: string;
+  };
+
+  geolocation?: {
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+  };
+
+  // Internal / Context Data
+  seed?: string;
+  proxyIp?: string;
 }
 
 interface Proxy {
   host?: string;
   port?: string;
+  server?: string;
   username?: string;
   password?: string;
+  externalIp?: string;
+  country?: string;
+  city?: string;
+  region?: string;
+  timezone?: string;
 }
 
 // Expose protected methods to the main world
