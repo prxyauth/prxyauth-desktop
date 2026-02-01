@@ -1,6 +1,6 @@
-import { autoUpdater } from "electron-updater";
-import { dialog, BrowserWindow } from "electron";
+import { BrowserWindow, dialog } from "electron";
 import log from "electron-log";
+import { autoUpdater } from "electron-updater";
 
 // Configure logging
 autoUpdater.logger = log;
