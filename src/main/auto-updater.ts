@@ -32,6 +32,7 @@ export function initAutoUpdater(mainWindow: BrowserWindow | null) {
 
   autoUpdater.on("update-available", async (info) => {
     log.info("Update available:", info.version);
+    log.info("Update details:", JSON.stringify(info));
 
     const result = await dialog.showMessageBox({
       type: "info",
@@ -44,21 +45,29 @@ export function initAutoUpdater(mainWindow: BrowserWindow | null) {
     });
 
     if (result.response === 0) {
+      log.info("User accepted update download");
       autoUpdater.downloadUpdate();
+    } else {
+      log.info("User deferred update download");
     }
   });
 
   autoUpdater.on("update-not-available", (info) => {
-    log.info("Update not available.");
+    log.info("Update not available. Current version:", info.version);
   });
 
   autoUpdater.on("error", (err) => {
     log.error("Error in auto-updater:", err);
+    dialog.showErrorBox(
+      "Update Error",
+      `An error occurred while checking for updates: ${err.message || err}`,
+    );
   });
 
   autoUpdater.on("download-progress", (progressObj) => {
     const percent = Math.round(progressObj.percent);
-    log.info(`Download progress: ${percent}%`);
+    const speed = Math.round(progressObj.bytesPerSecond / 1024); // KB/s
+    log.info(`Download progress: ${percent}% (${speed} KB/s)`);
 
     // Update window title with progress
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -69,7 +78,8 @@ export function initAutoUpdater(mainWindow: BrowserWindow | null) {
   });
 
   autoUpdater.on("update-downloaded", async (info) => {
-    log.info("Update downloaded:", info.version);
+    log.info("Update downloaded successfully:", info.version);
+    log.info("Update path:", info.downloadedFile);
 
     // Reset window title
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -81,14 +91,20 @@ export function initAutoUpdater(mainWindow: BrowserWindow | null) {
       title: "Update Ready",
       message: `Version ${info.version} has been downloaded.`,
       detail:
-        "The update will be installed when you restart the app. Restart now?",
-      buttons: ["Restart Now", "Later"],
+        "The application needs to restart to apply the update. Restart now?",
+      buttons: ["Restart and Update", "Later"],
       defaultId: 0,
       cancelId: 1,
     });
 
     if (result.response === 0) {
-      autoUpdater.quitAndInstall();
+      log.info("User chose to restart and install update");
+      // Use setImmediate to ensure all window events are handled before quitting
+      setImmediate(() => {
+        autoUpdater.quitAndInstall(false, true);
+      });
+    } else {
+      log.info("User chose to install update later");
     }
   });
 }
