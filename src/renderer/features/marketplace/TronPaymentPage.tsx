@@ -32,8 +32,8 @@ export function TronPaymentPage({
   const [copied, setCopied] = useState<"address" | "amount" | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [status, setStatus] = useState<
-    "pending" | "paid" | "failed" | "expired"
-  >("pending");
+    "PENDING" | "PAID" | "FAILED" | "EXPIRED"
+  >("PENDING");
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState<string>("");
 
@@ -43,8 +43,8 @@ export function TronPaymentPage({
         const response = await billingApi.getTransaction(transactionId);
         if (response.success && response.data) {
           setCheckoutData(response.data as any);
-          if (response.data.status === "paid") setStatus("paid");
-          else if (response.data.status === "expired") setStatus("expired");
+          if (response.data.status === "PAID") setStatus("PAID");
+          else if (response.data.status === "EXPIRED") setStatus("EXPIRED");
         }
       } catch (err) {
         console.error("Failed to fetch transaction", err);
@@ -58,14 +58,14 @@ export function TronPaymentPage({
 
   // Countdown logic
   useEffect(() => {
-    if (!checkoutData?.expiresAt || status !== "pending") return;
+    if (!checkoutData?.expiresAt || status !== "PENDING") return;
 
     const timer = setInterval(() => {
       const now = new Date().getTime();
       const distance = new Date(checkoutData.expiresAt!).getTime() - now;
 
       if (distance < 0) {
-        setStatus("expired");
+        setStatus("EXPIRED");
         setTimeLeft("00:00");
         clearInterval(timer);
         return;
@@ -84,15 +84,15 @@ export function TronPaymentPage({
   // Polling logic
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (checkoutData && status === "pending") {
+    if (checkoutData && status === "PENDING") {
       interval = setInterval(async () => {
         try {
           const result = await billingApi.verifyPayment(transactionId);
-          if (result.status === "paid") {
-            setStatus("paid");
+          if (result.status === "PAID") {
+            setStatus("PAID");
             clearInterval(interval);
-          } else if (result.status === "expired") {
-            setStatus("expired");
+          } else if (result.status === "EXPIRED") {
+            setStatus("EXPIRED");
             clearInterval(interval);
           }
         } catch (err) {
@@ -113,8 +113,8 @@ export function TronPaymentPage({
     try {
       setIsVerifying(true);
       const result = await billingApi.verifyPayment(transactionId);
-      if (result.status === "paid") {
-        setStatus("paid");
+      if (result.status === "PAID") {
+        setStatus("PAID");
       }
     } catch (err) {
       console.error("Manual verification failed", err);
@@ -192,17 +192,17 @@ export function TronPaymentPage({
               <div
                 className={cn(
                   "w-2 h-2 rounded-full",
-                  status === "paid"
+                  status === "PAID"
                     ? "bg-emerald-500 animate-pulse"
-                    : status === "expired"
+                    : status === "EXPIRED"
                       ? "bg-red-500"
                       : "bg-primary animate-pulse",
                 )}
               />
               <span className="text-[11px] font-black text-white uppercase tracking-widest">
-                {status === "paid"
+                {status === "PAID"
                   ? "Confirmed"
-                  : status === "expired"
+                  : status === "EXPIRED"
                     ? "Expired"
                     : "Pending"}
               </span>
@@ -212,7 +212,7 @@ export function TronPaymentPage({
 
         <div className="p-10">
           <AnimatePresence mode="wait">
-            {status === "paid" ? (
+            {status === "PAID" ? (
               <motion.div
                 key="success"
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -245,7 +245,7 @@ export function TronPaymentPage({
                   Return to Dashboard
                 </button>
               </motion.div>
-            ) : status === "expired" ? (
+            ) : status === "EXPIRED" ? (
               <motion.div
                 key="expired"
                 initial={{ opacity: 0 }}

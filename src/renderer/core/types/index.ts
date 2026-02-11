@@ -3,19 +3,62 @@
  * Mirrors backend DTOs for type safety across the application
  */
 
+export enum BrowserMode {
+  PLAYWRIGHT = "PLAYWRIGHT",
+  GOLOGIN = "GOLOGIN",
+  BROWSERLESS = "BROWSERLESS",
+}
+
+export enum PaymentMethod {
+  TRON = "TRON",
+}
+
+export enum PaymentTransactionStatus {
+  PENDING = "PENDING",
+  PAID = "PAID",
+  FAILED = "FAILED",
+  EXPIRED = "EXPIRED",
+}
+
+export enum Provider {
+  GOOGLE = "GOOGLE",
+  OFFICE = "OFFICE",
+  GITHUB = "GITHUB",
+  FACEBOOK = "FACEBOOK",
+}
+
+export enum ProxyProvider {
+  OXYLABS = "OXYLABS",
+  BRIGHTDATA = "BRIGHTDATA",
+  FLOPPYDATA = "FLOPPYDATA",
+}
+
+export enum SessionStatus {
+  PENDING = "PENDING",
+  AUTHENTICATED = "AUTHENTICATED",
+  EXPIRED = "EXPIRED",
+  FAILED = "FAILED",
+  REQUIRES_2FA = "REQUIRES_2FA",
+  REQUIRES_PASSWORD = "REQUIRES_PASSWORD",
+  STALE = "STALE",
+  AUTHENTICATING = "AUTHENTICATING",
+}
+
+export enum TenantLicenseStatus {
+  ACTIVE = "ACTIVE",
+  PAST_DUE = "PAST_DUE",
+  CANCELED = "CANCELED",
+  EXPIRED = "EXPIRED",
+}
+
+export enum UserRole {
+  ADMIN = "ADMIN",
+  USER = "USER",
+}
+
 // ============================================================================
 // Session Types
 // ============================================================================
-
-export type SessionStatus =
-  | "pending"
-  | "requires_password"
-  | "authenticated"
-  | "stale"
-  | "failed"
-  | "expired"
-  | "requires_2fa"
-  | "authenticating";
 
 export interface Fingerprint {
   // Core Identity
@@ -71,13 +114,11 @@ export interface Fingerprint {
   proxyIp?: string;
 }
 
-export type BrowserMode = "playwright" | "gologin" | "browserless";
-
 export interface Session {
   id: string;
   email: string;
   status: SessionStatus;
-  provider?: "google" | "office" | "github";
+  provider?: Provider;
   browserMode?: BrowserMode;
   fingerprint?: Fingerprint;
   password?: string;
@@ -199,7 +240,7 @@ export interface RegisterRequest {
 
 export interface LoginRequest {
   email: string;
-  provider: string;
+  password: string;
 }
 
 // ============================================================================
@@ -207,7 +248,7 @@ export interface LoginRequest {
 // ============================================================================
 
 export interface ProvisioningData {
-  provider: string;
+  provider: Provider;
   vercelImportUrl: string;
   githubForkUrl: string;
   vercelDeployUrl: string;
@@ -220,9 +261,9 @@ export interface ProvisioningData {
  * Provider subscription license details
  */
 export interface ProviderLicense {
-  provider: string;
+  provider: Provider;
   planType: string;
-  status: string;
+  status: "ACTIVE" | "PAST_DUE" | "CANCELED" | "EXPIRED";
   startDate: string;
   expiresAt: string;
 }
@@ -231,13 +272,13 @@ export interface CheckoutResponseData {
   paymentUrl: string;
   invoiceId: string;
   transactionId: string;
-  provider?: string;
+  provider?: Provider;
   expiresAt?: string;
 }
 
 export interface VerifyPaymentResponse {
   success: boolean;
-  status: "paid" | "pending" | "failed" | "expired";
+  status: "PAID" | "PENDING" | "FAILED" | "EXPIRED";
   amountPaid?: number;
 }
 
@@ -320,7 +361,7 @@ export interface ProxyPoolResponse {
 // Proxy Provider Types
 // ============================================================================
 
-export type ProxyProviderType = "oxylabs" | "brightdata" | "floppydata";
+export type ProxyProviderType = "OXYLABS" | "BRIGHTDATA" | "FLOPPYDATA";
 
 export interface ProxyProviderConfig {
   id: string;

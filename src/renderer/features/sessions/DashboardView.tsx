@@ -65,10 +65,10 @@ export function DashboardView({
   });
 
   const activeSessions = filteredSessions.filter(
-    (s) => s.status === "authenticated",
+    (s) => s.status === "AUTHENTICATED",
   ).length;
   const pendingSessions = filteredSessions.filter(
-    (s) => s.status === "authenticating" || s.status === "pending",
+    (s) => s.status === "AUTHENTICATING" || s.status === "PENDING",
   ).length;
 
   return (

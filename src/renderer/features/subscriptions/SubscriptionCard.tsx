@@ -3,18 +3,19 @@
  * Displays provider subscription details with premium styling
  */
 
+import { Provider, ProviderLicense } from "@core/types";
+import { cn } from "@core/utils";
 import { motion } from "framer-motion";
 import {
+  AlertCircle,
+  Calendar,
+  CheckCircle2,
+  Clock,
   Cloud,
+  Facebook,
   Github,
   Mail,
-  Calendar,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
 } from "lucide-react";
-import { ProviderLicense } from "@core/types";
-import { cn } from "@core/utils";
 
 interface SubscriptionCardProps {
   license: ProviderLicense;
@@ -22,26 +23,32 @@ interface SubscriptionCardProps {
 }
 
 const providerConfig: Record<
-  string,
+  Provider,
   { name: string; icon: typeof Cloud; color: string; gradient: string }
 > = {
-  google: {
+  GOOGLE: {
     name: "Google Cloud",
     icon: Cloud,
     color: "text-blue-400",
     gradient: "from-blue-500/20 to-blue-600/5",
   },
-  office: {
+  OFFICE: {
     name: "Microsoft 365",
     icon: Mail,
     color: "text-orange-400",
     gradient: "from-orange-500/20 to-orange-600/5",
   },
-  github: {
+  GITHUB: {
     name: "GitHub",
     icon: Github,
     color: "text-gray-400",
     gradient: "from-gray-500/20 to-gray-600/5",
+  },
+  FACEBOOK: {
+    name: "Facebook",
+    icon: Facebook,
+    color: "text-blue-400",
+    gradient: "from-blue-500/20 to-blue-600/5",
   },
 };
 
@@ -64,10 +71,10 @@ export function SubscriptionCard({
   license,
   index = 0,
 }: SubscriptionCardProps) {
-  const config = providerConfig[license.provider] || providerConfig.google;
+  const config = providerConfig[license.provider] || providerConfig.GOOGLE;
   const Icon = config.icon;
   const daysRemaining = getDaysRemaining(license.expiresAt);
-  const isActive = license.status === "active" && daysRemaining > 0;
+  const isActive = license.status === "ACTIVE" && daysRemaining > 0;
   const isExpiringSoon = daysRemaining > 0 && daysRemaining <= 7;
 
   return (

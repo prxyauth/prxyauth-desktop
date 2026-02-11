@@ -1,19 +1,19 @@
-import { useState } from "react";
+import { ProxyProviderConfig } from "@core/types";
+import { cn } from "@core/utils";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Plus,
-  Layers,
-  RefreshCw,
   AlertCircle,
   CheckCircle2,
+  Layers,
+  Plus,
+  RefreshCw,
   ShieldCheck,
   Zap,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useProxyProviders } from "./hooks/useProxyProviders";
+import { useState } from "react";
 import { ProxyProviderCard } from "./components/ProxyProviderCard";
 import { ProxyProviderModal } from "./components/ProxyProviderModal";
-import { ProxyProviderConfig } from "@core/types";
-import { cn } from "@core/utils";
+import { useProxyProviders } from "./hooks/useProxyProviders";
 
 export function ProxyProvidersView() {
   const {

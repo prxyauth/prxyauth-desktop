@@ -24,19 +24,19 @@ interface ProxyProviderCardProps {
 }
 
 const PROVIDER_INFO: Record<ProxyProviderType, { name: string; description: string; color: string; bg: string }> = {
-    oxylabs: {
+    OXYLABS: {
         name: "Oxylabs",
         description: "Premium Residential & Datacenter Proxies",
         color: "text-blue-400",
         bg: "bg-blue-500/10",
     },
-    brightdata: {
+    BRIGHTDATA: {
         name: "Bright Data",
         description: "Global Residential Proxy Network (Luminati)",
         color: "text-orange-400",
         bg: "bg-orange-500/10",
     },
-    floppydata: {
+    FLOPPYDATA: {
         name: "Floppy Data",
         description: "Specialized High-Performance Proxy Service",
         color: "text-emerald-400",

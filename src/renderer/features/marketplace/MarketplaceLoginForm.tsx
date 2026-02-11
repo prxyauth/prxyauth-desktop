@@ -10,7 +10,7 @@ import {
   officeApi,
   sessionApi,
 } from "@core/api/client";
-import { LoginResponse } from "@core/types";
+import { LoginResponse, SessionStatus } from "@core/types";
 import { cn } from "@core/utils";
 import { getBrowserFingerprint } from "@core/utils/fingerprint";
 import { AnimatePresence, motion } from "framer-motion";
@@ -31,7 +31,7 @@ import {
 import { FormEvent, useEffect, useState } from "react";
 
 interface MarketplaceLoginFormProps {
-  provider: "google" | "office" | "github";
+  provider: "GOOGLE" | "OFFICE" | "GITHUB";
   licenses: string[];
   onSuccess: (response: LoginResponse) => void;
   onBack: () => void;
@@ -45,7 +45,7 @@ export function MarketplaceLoginForm({
   onBack,
   onPurchase,
 }: MarketplaceLoginFormProps) {
-  const [provider, setProvider] = useState<"google" | "office" | "github">(
+  const [provider, setProvider] = useState<"GOOGLE" | "OFFICE" | "GITHUB">(
     initialProvider,
   );
   const [step, setStep] = useState<"provider" | "email" | "password">(
@@ -65,9 +65,9 @@ export function MarketplaceLoginForm({
   const [challengeMetadata, setChallengeMetadata] = useState<any>(null);
 
   const api =
-    provider === "google"
+    provider === "GOOGLE"
       ? googleApi
-      : provider === "office"
+      : provider === "OFFICE"
         ? officeApi
         : null;
 
@@ -299,7 +299,7 @@ export function MarketplaceLoginForm({
     passedMessage?: string,
   ) => {
     if (e) e.preventDefault();
-    console.log(passedMessage)
+    console.log(passedMessage);
     const activeSessionId = overrideSessionId || sessionId;
     const activeType = passedType || challengeType;
 
@@ -378,7 +378,7 @@ export function MarketplaceLoginForm({
     }
   };
 
-  const handlePurchase = async (p: "google" | "office" | "github") => {
+  const handlePurchase = async (p: "GOOGLE" | "OFFICE" | "GITHUB") => {
     try {
       setIsPurchasing(p);
       await onPurchase(p);
@@ -400,11 +400,11 @@ export function MarketplaceLoginForm({
       pollInterval = setInterval(async () => {
         try {
           const session = await sessionApi.get(sessionId);
-          if (session && session.status === "authenticated") {
+          if (session && session.status === SessionStatus.AUTHENTICATED) {
             onSuccess({
               success: true,
               sessionId: session.id,
-              status: "authenticated",
+              status: SessionStatus.AUTHENTICATED,
               message: "Authentication successful",
             });
           }
@@ -424,8 +424,8 @@ export function MarketplaceLoginForm({
     prov: string,
     message?: string | null,
   ) => {
-    const isGithub = prov === "github";
-    const isOffice = prov === "office";
+    const isGithub = prov === "GITHUB";
+    const isOffice = prov === "OFFICE";
 
     switch (type) {
       case "PUSH":
@@ -535,22 +535,22 @@ export function MarketplaceLoginForm({
               <div className="grid grid-cols-1 gap-4">
                 {[
                   {
-                    id: "google",
+                    id: "GOOGLE",
                     name: "Google Cloud",
                     desc: "Gmail, Workspace, GCP",
                     icon: Mail,
                     color: "primary",
                   },
                   {
-                    id: "office",
+                    id: "OFFICE",
                     name: "Microsoft 365",
                     desc: "Office 365, Outlook, Azure",
                     icon: Database,
                     color: "emerald-500",
                   },
                   {
-                    id: "github",
-                    name: "GitHub",
+                    id: "GITHUB",
+                    name: "GITHUB",
                     desc: "Repositories, Actions, Copilot",
                     icon: Key,
                     color: "gray-400",
@@ -655,16 +655,16 @@ export function MarketplaceLoginForm({
                       <div
                         className={cn(
                           "inline-flex p-3 rounded-2xl border mb-4",
-                          provider === "google"
+                          provider === "GOOGLE"
                             ? "bg-primary/10 border-primary/20"
-                            : provider === "office"
+                            : provider === "OFFICE"
                               ? "bg-emerald-500/10 border-emerald-500/20"
                               : "bg-gray-500/10 border-gray-500/20",
                         )}
                       >
-                        {provider === "google" ? (
+                        {provider === "GOOGLE" ? (
                           <Mail className="w-6 h-6 text-primary" />
-                        ) : provider === "office" ? (
+                        ) : provider === "OFFICE" ? (
                           <Database className="w-6 h-6 text-emerald-500" />
                         ) : (
                           <Key className="w-6 h-6 text-gray-400" />
@@ -675,18 +675,18 @@ export function MarketplaceLoginForm({
                       </h2>
                       <p className="text-gray-400 text-sm">
                         Use your{" "}
-                        {provider === "google"
+                        {provider === "GOOGLE"
                           ? "Google"
-                          : provider === "office"
+                          : provider === "OFFICE"
                             ? "Microsoft"
-                            : "GitHub"}{" "}
+                            : "GITHUB"}{" "}
                         Account
                       </p>
                     </div>
 
                     <form
                       onSubmit={
-                        provider === "github"
+                        provider === "GITHUB"
                           ? handleGithubLogin
                           : handleContinue
                       }
@@ -694,26 +694,26 @@ export function MarketplaceLoginForm({
                     >
                       <div className="space-y-2">
                         <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500 ml-1">
-                          {provider === "github"
+                          {provider === "GITHUB"
                             ? "Username or email"
                             : "Email or phone"}
                         </label>
                         <div className="relative group">
                           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 transition-colors group-focus-within:text-primary" />
                           <input
-                            type={provider === "github" ? "text" : "email"}
+                            type={provider === "GITHUB" ? "text" : "email"}
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder={
-                              provider === "github"
+                              provider === "GITHUB"
                                 ? "Username or email address"
                                 : "Email address"
                             }
                             className={cn(
                               "w-full pl-12 pr-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:ring-2 transition-all group-hover:border-white/20",
-                              provider === "google"
+                              provider === "GOOGLE"
                                 ? "focus:ring-primary/40 focus:border-primary/40"
-                                : provider === "office"
+                                : provider === "OFFICE"
                                   ? "focus:ring-emerald-500/40 focus:border-emerald-500/40"
                                   : "focus:ring-gray-400/40 focus:border-gray-400/40",
                             )}
@@ -722,7 +722,7 @@ export function MarketplaceLoginForm({
                         </div>
                       </div>
 
-                      {provider === "github" && (
+                      {provider === "GITHUB" && (
                         <div className="space-y-2">
                           <label className="text-[11px] font-bold uppercase tracking-widest text-gray-500 ml-1">
                             Password
@@ -749,9 +749,9 @@ export function MarketplaceLoginForm({
                           disabled={isLoading}
                           className={cn(
                             "px-8 py-3.5 rounded-2xl text-white font-bold text-sm uppercase tracking-widest relative overflow-hidden group/btn disabled:opacity-50",
-                            provider === "google"
+                            provider === "GOOGLE"
                               ? "bg-primary shadow-[0_0_20px_rgba(129,140,248,0.3)]"
-                              : provider === "office"
+                              : provider === "OFFICE"
                                 ? "bg-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
                                 : "bg-gray-600 shadow-[0_0_20px_rgba(107,114,128,0.3)]",
                           )}
@@ -761,7 +761,7 @@ export function MarketplaceLoginForm({
                               <Loader2 className="w-5 h-5 animate-spin" />
                             ) : (
                               <>
-                                {provider === "github" ? "Sign in" : "Next"}
+                                {provider === "GITHUB" ? "Sign in" : "Next"}
                                 <ChevronRight className="w-4 h-4" />
                               </>
                             )}
@@ -786,12 +786,12 @@ export function MarketplaceLoginForm({
                         <div
                           className={cn(
                             "w-5 h-5 rounded-full flex items-center justify-center",
-                            provider === "google"
+                            provider === "GOOGLE"
                               ? "bg-primary/20"
                               : "bg-emerald-500/20",
                           )}
                         >
-                          {provider === "google" ? (
+                          {provider === "GOOGLE" ? (
                             <Mail className="w-3 h-3 text-primary" />
                           ) : (
                             <Database className="w-3 h-3 text-emerald-500" />
@@ -821,7 +821,7 @@ export function MarketplaceLoginForm({
                             placeholder="Enter your password"
                             className={cn(
                               "w-full pl-12 pr-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:ring-2 transition-all group-hover:border-white/20",
-                              provider === "google"
+                              provider === "GOOGLE"
                                 ? "focus:ring-primary/40 focus:border-primary/40"
                                 : "focus:ring-emerald-500/40 focus:border-emerald-500/40",
                             )}
@@ -839,7 +839,7 @@ export function MarketplaceLoginForm({
                           disabled={isLoading}
                           className={cn(
                             "px-8 py-3.5 rounded-2xl text-white font-bold text-sm uppercase tracking-widest relative overflow-hidden disabled:opacity-50",
-                            provider === "google"
+                            provider === "GOOGLE"
                               ? "bg-primary shadow-[0_0_20px_rgba(129,140,248,0.3)]"
                               : "bg-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.3)]",
                           )}
@@ -956,7 +956,7 @@ export function MarketplaceLoginForm({
                 </form>
               )}
 
-              {provider === "github" && challengeMetadata?.availableMethods && (
+              {provider === "GITHUB" && challengeMetadata?.availableMethods && (
                 <div className="mt-8 pt-6 border-t border-white/5">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-4 text-center">
                     Switch Method

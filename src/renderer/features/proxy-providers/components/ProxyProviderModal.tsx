@@ -13,9 +13,9 @@ interface ProxyProviderModalProps {
 }
 
 const PROVIDER_OPTIONS: { value: ProxyProviderType; label: string }[] = [
-    { value: "oxylabs", label: "Oxylabs" },
-    { value: "brightdata", label: "Bright Data" },
-    { value: "floppydata", label: "Floppy Data" },
+    { value: "OXYLABS", label: "Oxylabs" },
+    { value: "BRIGHTDATA", label: "Bright Data" },
+    { value: "FLOPPYDATA", label: "Floppy Data" },
 ];
 
 export function ProxyProviderModal({
@@ -25,7 +25,7 @@ export function ProxyProviderModal({
     provider,
     isSaving
 }: ProxyProviderModalProps) {
-    const [selectedType, setSelectedType] = useState<ProxyProviderType>("oxylabs");
+    const [selectedType, setSelectedType] = useState<ProxyProviderType>("OXYLABS");
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [customerId, setCustomerId] = useState("");
@@ -42,7 +42,7 @@ export function ProxyProviderModal({
             setZone(provider.zone || "");
             setPriority(provider.priority || 1);
         } else {
-            setSelectedType("oxylabs");
+            setSelectedType("OXYLABS");
             setUsername("");
             setPassword("");
             setCustomerId("");

@@ -12,7 +12,7 @@ import {
     ChevronRight,
     ShieldCheck,
 } from "lucide-react";
-import { LoginResponse } from "@core/types";
+import { LoginResponse, SessionStatus } from "@core/types";
 import { useAuth } from "../hooks/useAuth";
 
 interface LoginFormProps {
@@ -44,7 +44,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
                 onSuccess({
                     success: true,
                     sessionId: "app-session",
-                    status: "authenticated",
+                    status: SessionStatus.AUTHENTICATED,
                     message: "Login successful"
                 });
             } else {

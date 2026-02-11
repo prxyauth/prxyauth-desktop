@@ -27,7 +27,7 @@ import { SubscriptionCard } from "../subscriptions/SubscriptionCard";
 
 const PROVIDERS = [
   {
-    id: "google",
+    id: "GOOGLE",
     name: "Google Cloud",
     tagline: "Gmail, Workspace, GCP",
     description:
@@ -42,7 +42,7 @@ const PROVIDERS = [
     popular: true,
   },
   {
-    id: "office",
+    id: "OFFICE",
     name: "Microsoft 365",
     tagline: "Office 365, Outlook, Azure",
     description:
@@ -56,7 +56,7 @@ const PROVIDERS = [
     ],
   },
   {
-    id: "github",
+    id: "GITHUB",
     name: "GitHub PRO",
     tagline: "Repositories, Actions, Copilot",
     description:
@@ -246,7 +246,7 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
           {!showConnect ? (
             PROVIDERS.map((p, idx) => {
               const license = subscriptions.find((s) => s.provider === p.id);
-              const isLicensed = !!license && license.status === "active";
+              const isLicensed = !!license && license.status === "ACTIVE";
               return (
                 <motion.div
                   key={p.id}
@@ -398,10 +398,10 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
 
                 <MarketplaceLoginForm
                   provider={
-                    (selectedProvider || "google") as
-                      | "google"
-                      | "office"
-                      | "github"
+                    (selectedProvider || "GOOGLE") as
+                      | "GOOGLE"
+                      | "OFFICE"
+                      | "GITHUB"
                   }
                   licenses={subscriptions.map((s) => s.provider)}
                   onSuccess={handleLoginSuccess}

@@ -1431,7 +1431,7 @@ ipcMain.handle(
       // [DETECTION BYPASS] Google detection of browser tampering is extremely aggressive.
       // We skip JS-based fingerprint injection for Google to favor native browser properties.
       const isGoogle =
-        session?.provider === "google" ||
+        session?.provider === "GOOGLE" ||
         session?.email?.toLowerCase().endsWith("@gmail.com") ||
         session?.email?.toLowerCase().endsWith("@googlemail.com");
 
