@@ -1,6 +1,6 @@
 {
   "name": "electron-prxyauth-client",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Electron desktop app for connecting to be-prxyauth Playwright WebSocket server",
   "main": "dist/main/index.js",
   "author": {
