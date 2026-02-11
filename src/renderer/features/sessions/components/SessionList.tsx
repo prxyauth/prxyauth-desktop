@@ -92,7 +92,7 @@ export function SessionList({
     onCloseBrowser,
     onShowPortal,
     isClosingId,
-    transitioningSessions = {},
+    transitioningSessions,
     openBrowsers = [],
     viewMode = "grid",
 }: SessionListProps) {
@@ -175,7 +175,7 @@ export function SessionList({
                             onCloseBrowser={onCloseBrowser}
                             onShowPortal={onShowPortal}
                             isClosing={isClosingId === session.id}
-                            transitionData={transitioningSessions[session.id]}
+                            transitionData={transitioningSessions?.[session.id]}
                             isBrowserOpen={openBrowsers.includes(session.id)}
                             variant={viewMode}
                         />
