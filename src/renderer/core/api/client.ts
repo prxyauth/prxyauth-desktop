@@ -622,7 +622,8 @@ export const billingApi = {
     transactionId: string,
   ): Promise<VerifyPaymentResponse> => {
     return apiFetch<VerifyPaymentResponse>(
-      `/api/billing/verify-payment/${transactionId}`,
+      `/api/billing/verify/${transactionId}`,
+      { method: "POST" },
     );
   },
 

@@ -21,9 +21,9 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { ProvisioningModal } from "../../shared/components/ProvisioningModal";
-import { MarketplaceLoginForm } from "./MarketplaceLoginForm";
 import { useSubscriptions } from "../subscriptions/useSubscriptions";
-import { SubscriptionCard } from "../subscriptions/SubscriptionCard";
+import { MarketplaceLoginForm } from "./MarketplaceLoginForm";
+// import { SubscriptionCard } from "../subscriptions/SubscriptionCard";
 
 const PROVIDERS = [
   {
@@ -89,7 +89,7 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
       const response = await billingApi.checkout({
         provider: p,
         durationMonths: 1,
-        paymentMethod: "tron", // Always use TRON by default
+        paymentMethod: "TRON", // Always use TRON by default
       });
 
       if (response.success && response.data) {
@@ -210,7 +210,7 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
         ))}
       </div>
       {/* Your Subscriptions Section */}
-      {subscriptions.length > 0 && !showConnect && (
+      {/* {subscriptions.length > 0 && !showConnect && (
         <section className="space-y-6">
           <div className="flex items-center gap-3">
             <div className="w-1.5 h-8 bg-primary rounded-full shadow-[0_0_10px_var(--primary-glow)]" />
@@ -228,7 +228,7 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
             ))}
           </div>
         </section>
-      )}
+      )} */}
 
       {/* Provider Marketplace Head */}
       {!showConnect && (

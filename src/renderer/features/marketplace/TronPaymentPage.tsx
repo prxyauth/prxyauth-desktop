@@ -279,9 +279,11 @@ export function TronPaymentPage({
                     <div className="relative p-8 rounded-[32px] bg-white/[0.02] border border-white/10 space-y-3">
                       <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-[0.3em] text-gray-500">
                         <span>Total to Deposit</span>
-                        <span className="text-primary font-black italic">
-                          Expires in {timeLeft}
-                        </span>
+                        {timeLeft && (
+                          <span className="text-primary font-black italic">
+                            Expires in {timeLeft}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-4">
                         <span className="text-5xl font-black text-white tracking-tighter tabular-nums">
