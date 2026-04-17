@@ -39,6 +39,11 @@ import {
   ApiResponse,
   CheckoutResponseData,
   VerifyPaymentResponse,
+  Transaction,
+  TransactionListResponse,
+  MarketplaceProvider,
+  PaginationParams,
+  PaginatedResponse,
 } from "../types";
 
 // ============================================================================
@@ -46,7 +51,7 @@ import {
 // ============================================================================
 
 const getApiBaseUrl = () => {
-  return localStorage.getItem("prx_api_url") || import.meta.env.VITE_API_URL;
+  return localStorage.getItem("prx_api_url") || import.meta.env.VITE_API_URL || "http://localhost:8000";
 };
 
 // ============================================================================
@@ -648,4 +653,224 @@ export const billingApi = {
     }>(`/api/billing/provisioning/${provider}`);
     return response.data;
   },
+
+  /**
+   * List all payment transactions for the tenant
+   */
+  listTransactions: async (): Promise<Transaction[]> => {
+    const response = await apiFetch<TransactionListResponse>(
+      "/api/billing/transactions",
+    );
+    return response.data || [];
+  },
+
+  /**
+   * List all marketplace provider catalog entries
+   */
+  listMarketplaceProviders: async (): Promise<MarketplaceProvider[]> => {
+    const response = await apiFetch<ApiResponse<MarketplaceProvider[]>>(
+      "/api/billing/marketplace-providers",
+    );
+    return response.data || [];
+  },
 };
+
+/**
+ * Admin Management API
+ */
+export const adminApi = {
+  /**
+   * Get system-wide statistics
+   */
+  getStats: async (): Promise<any> => {
+    const response = await apiFetch<ApiResponse<any>>("/api/admin/stats");
+    return response.data;
+  },
+
+  /**
+   * Users CRUD
+   */
+  listUsers: async (params?: PaginationParams): Promise<PaginatedResponse<any>> => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append("page", params.page.toString());
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.search) searchParams.append("search", params.search);
+
+    const response = await apiFetch<ApiResponse<any[]>>(`/api/admin/users?${searchParams.toString()}`);
+    return {
+      data: response.data || [],
+      total: (response as any).meta?.total || 0,
+      page: (response as any).meta?.page || 1,
+      limit: (response as any).meta?.limit || 10,
+    };
+  },
+  createUser: async (data: any): Promise<any> => {
+    return apiFetch("/api/admin/users", { method: "POST", body: data });
+  },
+  updateUser: async (userId: string, data: any): Promise<any> => {
+    return apiFetch(`/api/admin/users/${userId}`, {
+      method: "PUT",
+      body: data,
+    });
+  },
+  deleteUser: async (userId: string): Promise<any> => {
+    return apiFetch(`/api/admin/users/${userId}`, { method: "DELETE" });
+  },
+
+  /**
+   * Tenants CRUD
+   */
+  listTenants: async (params?: PaginationParams): Promise<PaginatedResponse<any>> => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append("page", params.page.toString());
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.search) searchParams.append("search", params.search);
+
+    const response = await apiFetch<ApiResponse<any[]>>(`/api/admin/tenants?${searchParams.toString()}`);
+    return {
+      data: response.data || [],
+      total: (response as any).meta?.total || 0,
+      page: (response as any).meta?.page || 1,
+      limit: (response as any).meta?.limit || 10,
+    };
+  },
+  createTenant: async (data: any): Promise<any> => {
+    return apiFetch("/api/admin/tenants", { method: "POST", body: data });
+  },
+  updateTenant: async (tenantId: string, data: any): Promise<any> => {
+    return apiFetch(`/api/admin/tenants/${tenantId}`, {
+      method: "PUT",
+      body: data,
+    });
+  },
+  deleteTenant: async (tenantId: string): Promise<any> => {
+    return apiFetch(`/api/admin/tenants/${tenantId}`, { method: "DELETE" });
+  },
+
+  /**
+   * Sessions
+   */
+  listSessions: async (params?: PaginationParams): Promise<PaginatedResponse<any>> => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append("page", params.page.toString());
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.search) searchParams.append("search", params.search);
+
+    const response = await apiFetch<ApiResponse<any[]>>(`/api/admin/sessions?${searchParams.toString()}`);
+    return {
+      data: response.data || [],
+      total: (response as any).meta?.total || 0,
+      page: (response as any).meta?.page || 1,
+      limit: (response as any).meta?.limit || 10,
+    };
+  },
+  deleteSession: async (sessionId: string): Promise<any> => {
+    return apiFetch(`/api/admin/sessions/${sessionId}`, { method: "DELETE" });
+  },
+
+  /**
+   * Proxies
+   */
+  listProxies: async (params?: PaginationParams): Promise<PaginatedResponse<any>> => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append("page", params.page.toString());
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.search) searchParams.append("search", params.search);
+
+    const response = await apiFetch<ApiResponse<any[]>>(`/api/admin/proxies?${searchParams.toString()}`);
+    return {
+      data: response.data || [],
+      total: (response as any).meta?.total || 0,
+      page: (response as any).meta?.page || 1,
+      limit: (response as any).meta?.limit || 10,
+    };
+  },
+  deleteProxy: async (proxyId: string): Promise<any> => {
+    return apiFetch(`/api/admin/proxies/${proxyId}`, { method: "DELETE" });
+  },
+
+  /**
+   * Transactions
+   */
+  listTransactions: async (params?: PaginationParams): Promise<PaginatedResponse<any>> => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append("page", params.page.toString());
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.search) searchParams.append("search", params.search);
+
+    const response = await apiFetch<ApiResponse<any[]>>(`/api/admin/transactions?${searchParams.toString()}`);
+    return {
+      data: response.data || [],
+      total: (response as any).meta?.total || 0,
+      page: (response as any).meta?.page || 1,
+      limit: (response as any).meta?.limit || 10,
+    };
+  },
+  updateTransaction: async (id: string, data: any) => {
+    return apiFetch(`/api/admin/transactions/${id}`, {
+      method: "PUT",
+      body: data,
+    });
+  },
+
+  /**
+   * Licenses
+   */
+  listLicenses: async (params?: PaginationParams): Promise<PaginatedResponse<any>> => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append("page", params.page.toString());
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.search) searchParams.append("search", params.search);
+
+    const response = await apiFetch<ApiResponse<any[]>>(`/api/admin/licenses?${searchParams.toString()}`);
+    return {
+      data: response.data || [],
+      total: (response as any).meta?.total || 0,
+      page: (response as any).meta?.page || 1,
+      limit: (response as any).meta?.limit || 10,
+    };
+  },
+  createLicense: async (data: any) => {
+    return apiFetch("/api/admin/licenses", { method: "POST", body: data });
+  },
+  updateLicense: async (id: string, data: any) => {
+    return apiFetch(`/api/admin/licenses/${id}`, {
+      method: "PUT",
+      body: data,
+    });
+  },
+  deleteLicense: async (id: string) => {
+    return apiFetch(`/api/admin/licenses/${id}`, { method: "DELETE" });
+  },
+
+  /**
+   * Telemetry
+   */
+  listDetectionEvents: async (params?: {
+    page?: number;
+    limit?: number;
+    type?: string;
+    provider?: string;
+    severity?: string;
+  }): Promise<PaginatedResponse<any>> => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append("page", params.page.toString());
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.type) searchParams.append("type", params.type);
+    if (params?.provider) searchParams.append("provider", params.provider);
+    if (params?.severity) searchParams.append("severity", params.severity);
+
+    const response = await apiFetch<ApiResponse<any[]>>(`/api/admin/telemetry/events?${searchParams.toString()}`);
+    return {
+      data: response.data || [],
+      total: (response as any).meta?.total || 0,
+      page: (response as any).meta?.page || 1,
+      limit: (response as any).meta?.limit || 50,
+    };
+  },
+  getDetectionStats: async (days: number = 7): Promise<any> => {
+    const response = await apiFetch<ApiResponse<any>>(`/api/admin/telemetry/stats?days=${days}`);
+    return response.data;
+  },
+};
+

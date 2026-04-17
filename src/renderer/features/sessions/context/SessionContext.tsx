@@ -8,6 +8,7 @@ import {
 } from "react";
 import { Session } from "@core/types";
 import { sessionApi, ApiError } from "@core/api/client";
+import { useAuth } from "@features/auth/hooks/useAuth";
 
 interface SessionContextType {
   sessions: Session[];
@@ -31,6 +32,7 @@ interface SessionContextType {
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -278,19 +280,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     let heartbeatInterval: any = null;
 
-    if (localStorage.getItem("prx_token")) {
+    if (isAuthenticated) {
       fetchSessions();
       syncBrowsers();
 
       // Reconcile state every 5 seconds
       heartbeatInterval = setInterval(syncBrowsers, 5000);
+    } else {
+      // Clear sessions when logged out
+      setSessions([]);
+      setIsLoading(false);
     }
 
     return () => {
       listenerCleanup();
       if (heartbeatInterval) clearInterval(heartbeatInterval);
     };
-  }, [fetchSessions, setSessionLog]);
+  }, [isAuthenticated, fetchSessions, setSessionLog]);
 
   const value: SessionContextType = {
     sessions,

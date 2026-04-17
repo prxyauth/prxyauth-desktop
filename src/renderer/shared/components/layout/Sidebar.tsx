@@ -1,20 +1,22 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@core/utils";
+import { AnimatePresence, motion } from "framer-motion";
 import {
+  ArrowLeftRight,
   ChevronLeft,
   ChevronRight,
+  Layers,
   LayoutDashboard,
   Server,
   Settings,
   ShieldCheck,
-  Layers,
-  ShoppingBag,
+  ShoppingBag
 } from "lucide-react";
 import { useState } from "react";
-import { cn } from "@core/utils";
 
 const menuItems = [
   { label: "Profiles", id: "sessions", icon: LayoutDashboard },
   { label: "Marketplace", id: "marketplace", icon: ShoppingBag },
+  { label: "Transactions", id: "transactions", icon: ArrowLeftRight },
   { label: "Proxy Manager", id: "proxies", icon: Server },
   { label: "Proxy Providers", id: "proxy-providers", icon: Layers },
   { label: "Settings", id: "settings", icon: Settings },

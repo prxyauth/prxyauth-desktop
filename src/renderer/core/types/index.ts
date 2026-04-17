@@ -429,3 +429,78 @@ export interface VncEndpoints {
   vncUrl: string;
   wsUrl: string;
 }
+
+// ============================================================================
+// Transaction & Billing Types
+// ============================================================================
+
+export type SessionProvider = "GOOGLE" | "OFFICE" | "GITHUB" | "FACEBOOK";
+
+export interface Transaction {
+  id: string;
+  amount: number;
+  currency: string;
+  provider: string;
+  paymentMethod: string;
+  status: "PAID" | "PENDING" | "FAILED" | "EXPIRED";
+  durationMonths: number;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface TransactionListResponse {
+  success: boolean;
+  data?: Transaction[];
+  error?: string;
+}
+
+// ============================================================================
+// Marketplace Provider Types
+// ============================================================================
+
+export interface MarketplaceProvider {
+  id: string;
+  provider: SessionProvider;
+  name: string;
+  tagline: string;
+  description: string;
+  icon: string;
+  color: string;
+  features: string[];
+  amount: number;
+  currency: string;
+  popular: boolean;
+  sortOrder: number;
+}
+
+// ============================================================================
+// Admin Types
+// ============================================================================
+
+export type ProviderLicenseStatus = "ACTIVE" | "PENDING" | "FAILED" | "EXPIRED";
+
+export interface AdminLicense {
+  id: string;
+  tenantId: string;
+  tenant: { name: string };
+  provider: SessionProvider;
+  planType: string;
+  startDate: string;
+  expiresAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  status: ProviderLicenseStatus;
+}
+
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}

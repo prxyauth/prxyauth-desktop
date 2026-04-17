@@ -12,6 +12,7 @@ import { ProxyProvidersView } from "@features/proxy-providers/ProxyProvidersView
 import { SettingsView } from "@features/settings/SettingsView";
 import { MarketplaceView } from "@features/marketplace/MarketplaceView";
 import { TronPaymentPage } from "@features/marketplace/TronPaymentPage";
+import { TransactionsView } from "@features/transactions/TransactionsView";
 
 export function MainLayout() {
   const [activeTab, setActiveTab] = useState("sessions");
@@ -70,6 +71,10 @@ export function MainLayout() {
         return <ProxiesView />;
       case "proxy-providers":
         return <ProxyProvidersView />;
+      case "transactions":
+        return <TransactionsView />;
+      case "notifications":
+        return <SettingsView initialTab="notifications" />;
       case "settings":
         return <SettingsView initialTab="api-keys" />;
       case "marketplace":
