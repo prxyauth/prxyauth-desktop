@@ -16,6 +16,7 @@ interface SessionContextType {
   error: string | null;
   refresh: () => Promise<void>;
   logout: (sessionId: string) => Promise<boolean>;
+  deleteMultiple: (sessionIds: string[]) => Promise<boolean>;
   loggingOutId: string | null;
   verify: (sessionId: string) => Promise<boolean>;
   verifyingId: string | null;
@@ -92,6 +93,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       return false;
     } finally {
       setLoggingOutId(null);
+    }
+  }, []);
+
+  const deleteMultiple = useCallback(async (sessionIds: string[]): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      await sessionApi.deleteMultiple(sessionIds);
+      setSessions((prev) => prev.filter((s) => !sessionIds.includes(s.id)));
+      return true;
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : "Failed to delete sessions";
+      setError(message);
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -304,6 +320,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     error,
     refresh: fetchSessions,
     logout,
+    deleteMultiple,
     loggingOutId,
     verify,
     verifyingId,

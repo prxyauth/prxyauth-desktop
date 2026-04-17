@@ -14,6 +14,8 @@ import {
   Fingerprint as FingerprintIcon,
   Globe,
   Home,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,6 +38,8 @@ interface SessionCardProps {
   transitionData?: { status: string; logs: string[] };
   isBrowserOpen?: boolean;
   variant?: "grid" | "list";
+  isSelected?: boolean;
+  onToggleSelection?: () => void;
 }
 
 function formatDate(dateString: string): string {
@@ -80,6 +84,8 @@ export function SessionCard({
   transitionData,
   isBrowserOpen,
   variant = "grid",
+  isSelected,
+  onToggleSelection,
 }: SessionCardProps) {
   const providerInfo = getProviderInfo(session.provider);
   const ProviderIcon = providerInfo.Icon;
@@ -96,7 +102,32 @@ export function SessionCard({
 
   if (variant === "list") {
     return (
-      <div className="group glass-container rounded-2xl p-3 glass-card-hover relative overflow-hidden flex items-center gap-6 border border-white/5 hover:border-primary/20 transition-all">
+      <div
+        className={cn(
+          "group glass-container rounded-2xl p-3 glass-card-hover relative overflow-hidden flex items-center gap-6 border transition-all cursor-pointer",
+          isSelected ? "border-primary/50 bg-primary/10" : "border-white/5 hover:border-primary/20"
+        )}
+        onClick={() => onToggleSelection?.()}
+      >
+        {/* Selection Checkbox */}
+        {onToggleSelection && (
+          <div className="flex items-center pl-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSelection();
+              }}
+              className="text-gray-500 hover:text-primary transition-colors"
+            >
+              {isSelected ? (
+                <CheckSquare className="w-5 h-5 text-primary" />
+              ) : (
+                <Square className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+        )}
+
         {/* ID Column */}
         <div className="w-12 shrink-0 flex flex-col items-center">
           <span className="text-[10px] font-mono text-gray-500 group-hover:text-primary/60 transition-colors">
@@ -167,7 +198,7 @@ export function SessionCard({
         </div>
 
         {/* Operations Column */}
-        <div className="w-64 shrink-0 flex items-center justify-end gap-2">
+        <div className="w-64 shrink-0 flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => onVerify(session.id)}
             disabled={isVerifying || isLoggingOut}
@@ -208,7 +239,7 @@ export function SessionCard({
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 text-[10px] font-black uppercase tracking-widest transition-all border border-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {transitionData || isClosing ? (
-                <RefreshCw className="w-4 h-4 animate-spin" />
+               <RefreshCw className="w-4 h-4 animate-spin" />
               ) : (
                 <RefreshCw className="w-4 h-4" />
               )}
@@ -260,7 +291,11 @@ export function SessionCard({
     <motion.div
       whileHover={{ y: -4 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
-      className="group glass-container rounded-[32px] p-6 glass-card-hover relative overflow-hidden h-full flex flex-col border border-white/5 hover:border-primary/30 transition-colors"
+      className={cn(
+        "group glass-container rounded-[32px] p-6 glass-card-hover relative overflow-hidden h-full flex flex-col border transition-colors cursor-pointer",
+        isSelected ? "border-primary/50 bg-primary/10" : "border-white/5 hover:border-primary/30"
+      )}
+      onClick={() => onToggleSelection?.()}
     >
       {/* Premium glass effects primitives */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none z-0" />
@@ -337,11 +372,34 @@ export function SessionCard({
                 {providerInfo.name}
               </span>
             </div>
-            <h3 className="text-xl font-black text-white truncate group-hover:text-primary transition-colors leading-tight">
-              {session.email}
+            <h3 className="text-xl font-black text-white truncate group-hover:text-primary transition-colors leading-tight pl-2">
+              {/* Checkbox inline with email so it looks natural in grid view */}
+              <div className="absolute top-6 right-6">
+                <StatusBadge status={session.status} size="sm" />
+              </div>
+              <div className="flex items-center gap-3 w-full">
+                  {onToggleSelection && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleSelection();
+                        }}
+                        className="text-gray-500 hover:text-primary transition-colors shrink-0 -ml-2"
+                    >
+                        {isSelected ? (
+                            <CheckSquare className="w-6 h-6 text-primary" />
+                        ) : (
+                            <Square className="w-6 h-6" />
+                        )}
+                    </button>
+                    )}
+                  <div className="truncate">
+                      {session.email}
+                  </div>
+              </div>
+
             </h3>
           </div>
-          <StatusBadge status={session.status} size="sm" />
         </div>
 
         {/* Info Grid */}
@@ -379,7 +437,7 @@ export function SessionCard({
         <div className="flex-1" />
 
         {/* Actions */}
-        <div className="space-y-3 pt-6 border-t border-white/5">
+        <div className="space-y-3 pt-6 border-t border-white/5" onClick={(e) => e.stopPropagation()}>
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => onVerify(session.id)}

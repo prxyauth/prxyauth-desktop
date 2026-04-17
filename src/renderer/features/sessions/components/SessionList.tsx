@@ -3,10 +3,12 @@
  */
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Inbox, AlertCircle } from "lucide-react";
+import { Inbox, AlertCircle, CheckSquare, Square, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@core/utils";
 import { Session } from "@core/types";
 import { SessionCard } from "@features/sessions/components/SessionCard";
+import { ConfirmationModal } from "@shared/components/ui/ConfirmationModal";
 
 interface SessionListProps {
     sessions: Session[];
@@ -16,6 +18,7 @@ interface SessionListProps {
     loggingOutId: string | null;
     onVerify: (sessionId: string) => Promise<boolean>;
     verifyingId: string | null;
+    onDeleteMultiple?: (sessionIds: string[]) => Promise<boolean>;
     onDetail?: (sessionId: string) => void;
     onLaunchBrowser: (sessionId: string) => void;
     onCloseBrowser?: (sessionId: string) => void;
@@ -87,6 +90,7 @@ export function SessionList({
     loggingOutId,
     onVerify,
     verifyingId,
+    onDeleteMultiple,
     onDetail,
     onLaunchBrowser,
     onCloseBrowser,
@@ -96,7 +100,41 @@ export function SessionList({
     openBrowsers = [],
     viewMode = "grid",
 }: SessionListProps) {
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
     if (isLoading) return <LoadingSkeleton viewMode={viewMode} />;
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === sessions.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(sessions.map((s) => s.id));
+        }
+    };
+
+    const toggleSelect = (id: string) => {
+        setSelectedIds((prev) =>
+            prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+        );
+    };
+
+    const handleDeleteSelected = async () => {
+        if (!onDeleteMultiple || selectedIds.length === 0) return;
+        setIsDeleting(true);
+        try {
+            const success = await onDeleteMultiple(selectedIds);
+            if (success) {
+                setSelectedIds([]);
+                setIsDeleteModalOpen(false);
+            }
+        } catch (err) {
+            console.error("Failed to delete sessions", err);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     if (error) {
         return (
@@ -135,53 +173,101 @@ export function SessionList({
     }
 
     return (
-        <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            layout
-            className={cn(
-                "transition-all duration-500",
-                viewMode === "grid"
-                    ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 3xl:grid-cols-5 gap-6"
-                    : "flex flex-col gap-4"
-            )}
-        >
-            {viewMode === "list" && (
-                <div className="flex items-center gap-6 px-6 py-4 border-b border-white/5 text-[9px] font-black uppercase tracking-[0.35em] text-gray-500 mb-2">
-                    <div className="w-12 shrink-0">ID</div>
-                    <div className="flex-1 min-w-0">Account Identity / Provider</div>
-                    <div className="hidden lg:block w-48 shrink-0">Secure Network</div>
-                    <div className="hidden xl:block w-48 shrink-0">Browser State</div>
-                    <div className="w-64 shrink-0 text-right">Operation Console</div>
+        <div className="space-y-6">
+            {sessions.length > 0 && (
+                <div className="flex items-center justify-between px-2">
+                    <button
+                        onClick={toggleSelectAll}
+                        className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 hover:text-white transition-colors"
+                    >
+                        {selectedIds.length === sessions.length && sessions.length > 0 ? (
+                            <CheckSquare className="w-4 h-4 text-primary" />
+                        ) : (
+                            <Square className="w-4 h-4" />
+                        )}
+                        {selectedIds.length === sessions.length && sessions.length > 0
+                            ? "Deselect All"
+                            : "Select All"}
+                    </button>
+
+                    <AnimatePresence>
+                        {selectedIds.length > 0 && (
+                            <motion.button
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 20 }}
+                                onClick={() => setIsDeleteModalOpen(true)}
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-red-500/20 transition-all border-dashed"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                Delete Selected ({selectedIds.length})
+                            </motion.button>
+                        )}
+                    </AnimatePresence>
                 </div>
             )}
-            <AnimatePresence mode="popLayout">
-                {sessions.map((session) => (
-                    <motion.div
-                        key={session.id}
-                        layout
-                        variants={itemVariants}
-                        exit="exit"
-                    >
-                        <SessionCard
-                            session={session}
-                            onLogout={onLogout}
-                            isLoggingOut={loggingOutId === session.id}
-                            onVerify={onVerify}
-                            isVerifying={verifyingId === session.id}
-                            onDetail={onDetail}
-                            onLaunchBrowser={onLaunchBrowser}
-                            onCloseBrowser={onCloseBrowser}
-                            onShowPortal={onShowPortal}
-                            isClosing={isClosingId === session.id}
-                            transitionData={transitioningSessions?.[session.id]}
-                            isBrowserOpen={openBrowsers.includes(session.id)}
-                            variant={viewMode}
-                        />
-                    </motion.div>
-                ))}
-            </AnimatePresence>
-        </motion.div>
+
+            <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                layout
+                className={cn(
+                    "transition-all duration-500",
+                    viewMode === "grid"
+                        ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 3xl:grid-cols-5 gap-6"
+                        : "flex flex-col gap-4"
+                )}
+            >
+                {viewMode === "list" && (
+                    <div className="flex items-center gap-6 px-6 py-4 border-b border-white/5 text-[9px] font-black uppercase tracking-[0.35em] text-gray-500 mb-2 pl-12">
+                        <div className="w-12 shrink-0">ID</div>
+                        <div className="flex-1 min-w-0">Account Identity / Provider</div>
+                        <div className="hidden lg:block w-48 shrink-0">Secure Network</div>
+                        <div className="hidden xl:block w-48 shrink-0">Browser State</div>
+                        <div className="w-64 shrink-0 text-right">Operation Console</div>
+                    </div>
+                )}
+                <AnimatePresence mode="popLayout">
+                    {sessions.map((session) => (
+                        <motion.div
+                            key={session.id}
+                            layout
+                            variants={itemVariants}
+                            exit="exit"
+                        >
+                            <SessionCard
+                                session={session}
+                                onLogout={onLogout}
+                                isLoggingOut={loggingOutId === session.id}
+                                onVerify={onVerify}
+                                isVerifying={verifyingId === session.id}
+                                onDetail={onDetail}
+                                onLaunchBrowser={onLaunchBrowser}
+                                onCloseBrowser={onCloseBrowser}
+                                onShowPortal={onShowPortal}
+                                isClosing={isClosingId === session.id}
+                                transitionData={transitioningSessions?.[session.id]}
+                                isBrowserOpen={openBrowsers.includes(session.id)}
+                                variant={viewMode}
+                                isSelected={selectedIds.includes(session.id)}
+                                onToggleSelection={() => toggleSelect(session.id)}
+                            />
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
+            </motion.div>
+
+            <ConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleDeleteSelected}
+                title="Delete Sessions"
+                message={`Are you sure you want to delete ${selectedIds.length} selected sessions? This action cannot be undone.`}
+                confirmLabel={isDeleting ? "Deleting..." : "Delete All"}
+                isProcessing={isDeleting}
+                variant="danger"
+            />
+        </div>
     );
 }

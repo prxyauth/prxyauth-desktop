@@ -31,6 +31,7 @@ export function DashboardView({
     isLoading,
     error,
     logout,
+    deleteMultiple,
     loggingOutId,
     verify,
     verifyingId,
@@ -178,6 +179,7 @@ export function DashboardView({
         isLoading={isLoading}
         error={error}
         onLogout={logout}
+        onDeleteMultiple={deleteMultiple}
         loggingOutId={loggingOutId}
         onVerify={verify}
         verifyingId={verifyingId}

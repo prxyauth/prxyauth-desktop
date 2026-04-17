@@ -11,6 +11,7 @@ export interface UseSessionsReturn {
     error: string | null;
     refresh: () => Promise<void>;
     logout: (sessionId: string) => Promise<boolean>;
+    deleteMultiple: (sessionIds: string[]) => Promise<boolean>;
     loggingOutId: string | null;
     verify: (sessionId: string) => Promise<boolean>;
     verifyingId: string | null;

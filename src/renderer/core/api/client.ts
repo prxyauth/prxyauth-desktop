@@ -303,6 +303,16 @@ export const sessionApi = {
   },
 
   /**
+   * Delete multiple sessions
+   */
+  deleteMultiple: async (sessionIds: string[]): Promise<{ success: boolean; message: string }> => {
+    return apiFetch<{ success: boolean; message: string }>("/api/sessions", {
+      method: "DELETE",
+      body: { sessionIds },
+    });
+  },
+
+  /**
    * Open session in a headed browser
    */
   open: async (
