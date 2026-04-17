@@ -255,6 +255,8 @@ export interface ProvisioningData {
   setupCommand: string;
   envContent: string;
   readmeContent: string;
+  downloadUrl?: string;
+  cached?: boolean;
 }
 
 /**

@@ -3,6 +3,7 @@
  */
 
 import { billingApi } from "@core/api/client";
+import { MarketplaceProvider } from "@core/types";
 import { cn } from "@core/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -17,59 +18,27 @@ import {
   Loader2,
   Mail,
   ShieldCheck,
+  ShoppingBag,
   Star,
+  type LucideIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ProvisioningModal } from "../../shared/components/ProvisioningModal";
 import { useSubscriptions } from "../subscriptions/useSubscriptions";
 import { MarketplaceLoginForm } from "./MarketplaceLoginForm";
 // import { SubscriptionCard } from "../subscriptions/SubscriptionCard";
 
-const PROVIDERS = [
-  {
-    id: "GOOGLE",
-    name: "Google Cloud",
-    tagline: "Gmail, Workspace, GCP",
-    description:
-      "Enterprise-grade automation for Google accounts. Securely manage Gmail, Sheets, and more with proprietary stealth bypass.",
-    icon: Mail,
-    color: "primary",
-    features: [
-      "Bypass Google Workspace 2FA",
-      "Encrypted Session Storage",
-      "Headless/Headed Modes",
-    ],
-    popular: true,
-  },
-  {
-    id: "OFFICE",
-    name: "Microsoft 365",
-    tagline: "Office 365, Outlook, Azure",
-    description:
-      "Seamlessly automate Microsoft ecosystems. Perfect for Outlook automation, Azure management, and SharePoint tasks.",
-    icon: Database,
-    color: "emerald-400",
-    features: [
-      "Active Directory Support",
-      "Persistent Sessions",
-      "Custom Fingerprinting",
-    ],
-  },
-  {
-    id: "GITHUB",
-    name: "GitHub PRO",
-    tagline: "Repositories, Actions, Copilot",
-    description:
-      "Advanced automation for developer workflows. Manage repositories, secrets, and actions without triggering security alerts.",
-    icon: Key,
-    color: "gray-400",
-    features: [
-      "MFA Bypass Protection",
-      "Websocket Tunneling",
-      "High-Concurrency Support",
-    ],
-  },
-];
+const ICON_MAP: Record<string, LucideIcon> = {
+  Mail,
+  Database,
+  Key,
+  Globe,
+  ShieldCheck,
+  Star,
+  ShoppingBag,
+};
+
+const DEFAULT_ICON = Globe;
 
 interface MarketplaceViewProps {
   onNavigateToPayment: (transactionId: string) => void;
@@ -81,6 +50,33 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [showConnect, setShowConnect] = useState(false);
   const [showProvisioning, setShowProvisioning] = useState(false);
+
+  const [providers, setProviders] = useState<MarketplaceProvider[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(true);
+  const [providersError, setProvidersError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        setProvidersLoading(true);
+        setProvidersError(null);
+        const data = await billingApi.listMarketplaceProviders();
+        setProviders(data);
+      } catch (err) {
+        setProvidersError(
+          err instanceof Error ? err.message : "Failed to load providers"
+        );
+        console.error("Error fetching marketplace providers:", err);
+      } finally {
+        setProvidersLoading(false);
+      }
+    };
+    fetchProviders();
+  }, []);
+
+  const getIcon = (iconName: string): LucideIcon => {
+    return ICON_MAP[iconName] || DEFAULT_ICON;
+  };
 
   const handlePurchase = async (p: string) => {
     try {
@@ -209,26 +205,6 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
           </motion.div>
         ))}
       </div>
-      {/* Your Subscriptions Section */}
-      {/* {subscriptions.length > 0 && !showConnect && (
-        <section className="space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-1.5 h-8 bg-primary rounded-full shadow-[0_0_10px_var(--primary-glow)]" />
-            <h2 className="text-2xl font-black text-white tracking-tighter uppercase">
-              Your Subscriptions
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {subscriptions.map((license, idx) => (
-              <SubscriptionCard
-                key={license.provider}
-                license={license}
-                index={idx}
-              />
-            ))}
-          </div>
-        </section>
-      )} */}
 
       {/* Provider Marketplace Head */}
       {!showConnect && (
@@ -243,10 +219,93 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
       {/* Provider Marketplace */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <AnimatePresence mode="wait">
-          {!showConnect ? (
-            PROVIDERS.map((p, idx) => {
-              const license = subscriptions.find((s) => s.provider === p.id);
+          {showConnect ? (
+            <motion.div
+              key="connect-flow"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.05 }}
+              className="lg:col-span-3 flex flex-col items-center py-6"
+            >
+              <div className="w-full max-w-md">
+                <button
+                  onClick={() => setShowConnect(false)}
+                  className="mb-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 hover:text-white transition-all group"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
+                  Back to Marketplace
+                </button>
+
+                <div className="text-center mb-8">
+                  <h2 className="text-2xl font-black text-white tracking-tighter uppercase mb-2">
+                    Connect{" "}
+                    {providers.find((p) => p.provider === selectedProvider)?.name}
+                  </h2>
+                  <p className="text-[10px] text-gray-500 font-medium tracking-tight uppercase">
+                    Deploy a new automation worker
+                  </p>
+                </div>
+
+                <MarketplaceLoginForm
+                  provider={
+                    (selectedProvider || "GOOGLE") as
+                      | "GOOGLE"
+                      | "OFFICE"
+                      | "GITHUB"
+                  }
+                  licenses={subscriptions.map((s) => s.provider)}
+                  onSuccess={handleLoginSuccess}
+                  onBack={() => setShowConnect(false)}
+                  onPurchase={handlePurchase}
+                />
+              </div>
+            </motion.div>
+          ) : providersLoading ? (
+            <>
+              {[0, 1, 2].map((i) => (
+                <motion.div
+                  key={`skeleton-${i}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="glass-container rounded-[40px] p-8 flex flex-col h-[400px] animate-pulse"
+                >
+                  <div className="w-16 h-16 rounded-3xl bg-white/5 mb-6" />
+                  <div className="w-48 h-6 rounded-xl bg-white/5 mb-2" />
+                  <div className="w-32 h-3 rounded bg-white/5 mb-8" />
+                  <div className="flex-1 space-y-3">
+                    <div className="w-full h-12 rounded-xl bg-white/5" />
+                    <div className="w-3/4 h-4 rounded bg-white/5" />
+                    <div className="w-2/3 h-4 rounded bg-white/5" />
+                    <div className="w-1/2 h-4 rounded bg-white/5" />
+                  </div>
+                  <div className="w-full h-12 rounded-2xl bg-white/5 mt-6" />
+                </motion.div>
+              ))}
+            </>
+          ) : providersError ? (
+            <motion.div
+              key="error"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="lg:col-span-3 text-center py-20"
+            >
+              <p className="text-red-400 text-sm font-medium mb-4">
+                {providersError}
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-3 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all font-black text-[10px] uppercase tracking-widest"
+              >
+                Retry
+              </button>
+            </motion.div>
+          ) : (
+            providers.map((p, idx) => {
+              const license = subscriptions.find((s) => s.provider === p.provider);
               const isLicensed = !!license && license.status === "ACTIVE";
+              const IconComponent = getIcon(p.icon);
+
               return (
                 <motion.div
                   key={p.id}
@@ -292,14 +351,23 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
                           : "bg-white/5 border-white/10 text-gray-500",
                       )}
                     >
-                      <p.icon className="w-8 h-8" />
+                      <IconComponent className="w-8 h-8" />
                     </div>
                     <h3 className="text-2xl font-black text-white uppercase tracking-tight mb-1">
                       {p.name}
                     </h3>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-4 shrink-0">
                       {p.tagline}
                     </p>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-black text-white tracking-tighter">
+                        {p.currency === "USD" ? "$" : p.currency}{" "}
+                        {p.amount.toLocaleString()}
+                      </span>
+                      <span className="text-gray-500 font-medium text-sm">
+                        / month
+                      </span>
+                    </div>
                   </div>
 
                   {/* Description & Features */}
@@ -326,7 +394,7 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
                       <div className="flex flex-col gap-3">
                         <button
                           onClick={() => {
-                            setSelectedProvider(p.id);
+                            setSelectedProvider(p.provider);
                             setShowProvisioning(true);
                           }}
                           className="w-full relative group px-6 py-4 rounded-2xl text-[11px] font-black text-white overflow-hidden transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest bg-emerald-600 hover:bg-emerald-500"
@@ -335,11 +403,11 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
                           <Globe className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handlePurchase(p.id)}
-                          disabled={isPurchasing === p.id}
+                          onClick={() => handlePurchase(p.provider)}
+                          disabled={isPurchasing === p.provider}
                           className="w-full relative group px-6 py-3 rounded-2xl text-[9px] font-black text-white/60 hover:text-white overflow-hidden transition-all border border-white/5 hover:border-white/10 flex items-center justify-center gap-2 uppercase tracking-widest bg-white/5 hover:bg-white/10 disabled:opacity-50"
                         >
-                          {isPurchasing === p.id ? (
+                          {isPurchasing === p.provider ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
                             <>
@@ -351,11 +419,11 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
                       </div>
                     ) : (
                       <button
-                        onClick={() => handlePurchase(p.id)}
-                        disabled={isPurchasing === p.id}
-                        className="w-full relative group px-6 py-5 rounded-2xl text-[11px] font-black text-white overflow-hidden transition-all shadow-2xl flex items-center justify-center gap-3 uppercase tracking-widest bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-95 group disabled:opacity-50"
+                        onClick={() => handlePurchase(p.provider)}
+                        disabled={isPurchasing === p.provider}
+                        className="w-full relative group px-6 py-5 rounded-2xl text-[11px] font-black text-white overflow-hidden transition-all shadow-[0_0_20px_var(--primary-glow)] flex items-center justify-center gap-3 uppercase tracking-widest bg-emerald-600 hover:bg-emerald-500 hover:scale-[1.02] active:scale-95 bg-linear-to-r from-primary to-secondary disabled:opacity-50"
                       >
-                        {isPurchasing === p.id ? (
+                        {isPurchasing === p.provider ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <>
@@ -369,47 +437,6 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
                 </motion.div>
               );
             })
-          ) : (
-            <motion.div
-              key="connect-flow"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.05 }}
-              className="lg:col-span-3 flex flex-col items-center py-6"
-            >
-              <div className="w-full max-w-md">
-                <button
-                  onClick={() => setShowConnect(false)}
-                  className="mb-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 hover:text-white transition-all group"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
-                  Back to Marketplace
-                </button>
-
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-black text-white tracking-tighter uppercase mb-2">
-                    Connect{" "}
-                    {PROVIDERS.find((p) => p.id === selectedProvider)?.name}
-                  </h2>
-                  <p className="text-[10px] text-gray-500 font-medium tracking-tight uppercase">
-                    Deploy a new automation worker
-                  </p>
-                </div>
-
-                <MarketplaceLoginForm
-                  provider={
-                    (selectedProvider || "GOOGLE") as
-                      | "GOOGLE"
-                      | "OFFICE"
-                      | "GITHUB"
-                  }
-                  licenses={subscriptions.map((s) => s.provider)}
-                  onSuccess={handleLoginSuccess}
-                  onBack={() => setShowConnect(false)}
-                  onPurchase={handlePurchase}
-                />
-              </div>
-            </motion.div>
           )}
         </AnimatePresence>
       </div>
@@ -419,7 +446,7 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
         onClose={() => setShowProvisioning(false)}
         providerId={selectedProvider || ""}
         providerName={
-          PROVIDERS.find((p) => p.id === selectedProvider)?.name || ""
+          providers.find((p) => p.provider === selectedProvider)?.name || ""
         }
       />
 
