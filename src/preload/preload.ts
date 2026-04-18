@@ -169,6 +169,25 @@ contextBridge.exposeInMainWorld("prxApi", {
         ipcRenderer.removeListener("playwright:browserClosed", handler);
       };
     },
+
+    // Event listener for browser status change events (launching, open, closed)
+    onBrowserStatusChanged: (
+      callback: (data: { sessionId: string; status: string }) => void,
+    ): (() => void) => {
+      const handler = (
+        _event: unknown,
+        data: { sessionId: string; status: string },
+      ) => {
+        callback(data);
+      };
+      ipcRenderer.on("playwright:browserStatusChanged", handler);
+      return () => {
+        ipcRenderer.removeListener(
+          "playwright:browserStatusChanged",
+          handler,
+        );
+      };
+    },
   },
   browser: {
     getStatus: () => ipcRenderer.invoke("browser:getStatus"),
@@ -238,6 +257,9 @@ declare global {
           session?: { email?: string; password?: string },
         ) => Promise<ApiResult>;
         onBrowserClosed: (callback: (sessionId: string) => void) => () => void;
+        onBrowserStatusChanged: (
+          callback: (data: { sessionId: string; status: string }) => void,
+        ) => () => void;
       };
       browser: {
         getStatus: () => Promise<{

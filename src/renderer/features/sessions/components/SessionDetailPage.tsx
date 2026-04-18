@@ -25,6 +25,8 @@ import {
     Trash2,
     ExternalLink,
     Play,
+    X,
+    RefreshCw,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Session } from "@core/types";
@@ -235,13 +237,16 @@ function Spinner() {
 }
 
 export function SessionDetailPage({ sessionId, onBack }: SessionDetailPageProps) {
-    const { sessions, logout, verify, verifyingId, launchSessionBrowser } = useSessions();
+    const { sessions, logout, verify, verifyingId, launchSessionBrowser, closeSessionBrowser, browserStatuses } = useSessions();
     const [session, setSession] = useState<Session | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showConfirmTerminate, setShowConfirmTerminate] = useState(false);
     const [isTerminating, setIsTerminating] = useState(false);
     const [isLaunching, setIsLaunching] = useState(false);
+
+    const browserStatus = session ? browserStatuses[session.id] : undefined;
+    const isBrowserOpen = browserStatus === 'open' || browserStatus === 'launching';
 
     // Find session from context
     useEffect(() => {
@@ -273,6 +278,15 @@ export function SessionDetailPage({ sessionId, onBack }: SessionDetailPageProps)
             console.error("Failed to launch browser:", err);
         } finally {
             setIsLaunching(false);
+        }
+    };
+
+    const handleCloseBrowser = async () => {
+        if (!session) return;
+        try {
+            await closeSessionBrowser(session.id);
+        } catch (err) {
+            console.error("Failed to close browser:", err);
         }
     };
 
@@ -359,6 +373,22 @@ export function SessionDetailPage({ sessionId, onBack }: SessionDetailPageProps)
                     </p>
                 </div>
                 <StatusBadge status={session.status} />
+                {browserStatus && (
+                    <div className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest",
+                        browserStatus === 'open' && "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400",
+                        browserStatus === 'launching' && "bg-amber-500/10 border border-amber-500/20 text-amber-400",
+                        browserStatus === 'closed' && "bg-gray-500/10 border border-gray-500/20 text-gray-400",
+                    )}>
+                        <div className={cn(
+                            "w-2 h-2 rounded-full",
+                            browserStatus === 'open' && "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.5)]",
+                            browserStatus === 'launching' && "bg-amber-400 animate-pulse shadow-[0_0_8px_rgba(251,191,36,0.5)]",
+                            browserStatus === 'closed' && "bg-gray-400",
+                        )} />
+                        Browser {browserStatus === 'open' ? 'Active' : browserStatus === 'launching' ? 'Launching' : 'Closed'}
+                    </div>
+                )}
             </div>
 
             <main className="space-y-6">
@@ -385,16 +415,29 @@ export function SessionDetailPage({ sessionId, onBack }: SessionDetailPageProps)
                         </span>
                     </button>
 
-                    <button
-                        onClick={handleLaunchBrowser}
-                        disabled={isVerifying || isTerminating || isLaunching}
-                        className="relative group py-4 px-4 rounded-2xl transition-all disabled:opacity-50 bg-emerald-500/10 border border-emerald-500/20 hover:border-emerald-500/40"
-                    >
-                        <span className="flex items-center justify-center gap-2 text-emerald-400 font-bold text-sm">
-                            {isLaunching ? <Spinner /> : <Play className="w-4 h-4" />}
-                            Launch Browser
-                        </span>
-                    </button>
+                    {isBrowserOpen ? (
+                        <button
+                            onClick={handleCloseBrowser}
+                            disabled={isVerifying || isTerminating}
+                            className="relative group py-4 px-4 rounded-2xl transition-all disabled:opacity-50 bg-orange-500/10 border border-orange-500/20 hover:border-orange-500/40"
+                        >
+                            <span className="flex items-center justify-center gap-2 text-orange-400 font-bold text-sm">
+                                {browserStatus === 'launching' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                                {browserStatus === 'launching' ? 'Launching...' : 'Close Browser'}
+                            </span>
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleLaunchBrowser}
+                            disabled={isVerifying || isTerminating || isLaunching}
+                            className="relative group py-4 px-4 rounded-2xl transition-all disabled:opacity-50 bg-emerald-500/10 border border-emerald-500/20 hover:border-emerald-500/40"
+                        >
+                            <span className="flex items-center justify-center gap-2 text-emerald-400 font-bold text-sm">
+                                {isLaunching ? <Spinner /> : <Play className="w-4 h-4" />}
+                                Launch Browser
+                            </span>
+                        </button>
+                    )}
 
                     <button
                         onClick={handleTerminateClick}

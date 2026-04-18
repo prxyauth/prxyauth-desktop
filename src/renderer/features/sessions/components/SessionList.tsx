@@ -26,6 +26,7 @@ interface SessionListProps {
     isClosingId?: string | null;
     transitioningSessions?: Record<string, { status: string; logs: string[] }>;
     openBrowsers?: string[];
+    browserStatuses?: Record<string, string>;
     viewMode?: "grid" | "list";
 }
 
@@ -98,6 +99,7 @@ export function SessionList({
     isClosingId,
     transitioningSessions,
     openBrowsers = [],
+    browserStatuses = {},
     viewMode = "grid",
 }: SessionListProps) {
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -248,6 +250,7 @@ export function SessionList({
                                 isClosing={isClosingId === session.id}
                                 transitionData={transitioningSessions?.[session.id]}
                                 isBrowserOpen={openBrowsers.includes(session.id)}
+                                browserStatus={browserStatuses[session.id]}
                                 variant={viewMode}
                                 isSelected={selectedIds.includes(session.id)}
                                 onToggleSelection={() => toggleSelect(session.id)}

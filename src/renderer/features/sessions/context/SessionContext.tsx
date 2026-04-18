@@ -4,11 +4,14 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   ReactNode,
 } from "react";
 import { Session } from "@core/types";
 import { sessionApi, ApiError } from "@core/api/client";
 import { useAuth } from "@features/auth/hooks/useAuth";
+
+export type BrowserStatus = "launching" | "open" | "closed";
 
 interface SessionContextType {
   sessions: Session[];
@@ -25,6 +28,7 @@ interface SessionContextType {
   isClosing: string | null;
   transitioningSessions: Record<string, { status: string; logs: string[] }>;
   openBrowsers: string[];
+  browserStatuses: Record<string, BrowserStatus>;
   launchSessionBrowser: (sessionId: string) => Promise<void>;
   closeSessionBrowser: (sessionId: string) => Promise<void>;
   showSessionPortal: (sessionId: string) => Promise<void>;
@@ -44,7 +48,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [transitioningSessions, setTransitioningSessions] = useState<
     Record<string, { status: string; logs: string[] }>
   >({});
-  const [openBrowsers, setOpenBrowsers] = useState<string[]>([]);
+
+  // Browser status tracking: source of truth for browser lifecycle
+  const [browserStatuses, setBrowserStatuses] = useState<
+    Record<string, BrowserStatus>
+  >({});
+
+  // Derive openBrowsers for backward compatibility
+  const openBrowsers = useMemo(
+    () =>
+      Object.entries(browserStatuses)
+        .filter(([, status]) => status === "launching" || status === "open")
+        .map(([id]) => id),
+    [browserStatuses],
+  );
 
   const setSessionLog = useCallback(
     (sessionId: string, status: string | null, logEntry?: string) => {
@@ -148,8 +165,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const launchSessionBrowser = useCallback(
     async (sessionId: string) => {
-      // Optimistic UI update
-      setOpenBrowsers((prev) => [...new Set([...prev, sessionId])]);
+      // Optimistic UI update — mark as launching
+      setBrowserStatuses((prev) => ({ ...prev, [sessionId]: "launching" }));
       setSessionLog(sessionId, "Initializing...");
 
       try {
@@ -173,7 +190,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
         setSessionLog(
           sessionId,
-          "Launching Chromium",
+          "Launching",
           "Applying anti-detection fingerprints...",
         );
         const result = await (window as any).prxApi.playwright.launchLocal(
@@ -188,6 +205,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           throw new Error(result.error || "Failed to launch local browser");
         }
 
+        // Main process will emit 'open' status via browserStatusChanged event
         setSessionLog(
           sessionId,
           "Connection Ready",
@@ -197,7 +215,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setTimeout(() => setSessionLog(sessionId, null), 2000);
       } catch (err) {
         // Revert optimistic update
-        setOpenBrowsers((prev) => prev.filter((id) => id !== sessionId));
+        setBrowserStatuses((prev) => {
+          const next = { ...prev };
+          delete next[sessionId];
+          return next;
+        });
         setSessionLog(sessionId, null);
 
         const message =
@@ -213,8 +235,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const closeSessionBrowser = useCallback(
     async (sessionId: string) => {
-      // Optimistic UI update
-      setOpenBrowsers((prev) => prev.filter((id) => id !== sessionId));
+      // Optimistic UI update — remove from tracked
+      setBrowserStatuses((prev) => {
+        const next = { ...prev };
+        delete next[sessionId];
+        return next;
+      });
       setSessionLog(sessionId, "Terminating...");
 
       try {
@@ -225,14 +251,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         if (!result.success) {
           throw new Error(result.error || "Failed to close browser");
         }
-        setSessionLog(
-          sessionId,
-          "Cleanup In Progress",
-          "Closing proxy bridge and releasing resources...",
-        );
+        // Browser is already closed and cleaned up by main process at this point.
+        // The disconnected handler has already emitted events to clear state.
+        setSessionLog(sessionId, null);
       } catch (err) {
-        // Revert optimistic update
-        setOpenBrowsers((prev) => [...new Set([...prev, sessionId])]);
+        // Revert optimistic update — mark as open again
+        setBrowserStatuses((prev) => ({ ...prev, [sessionId]: "open" }));
         setSessionLog(sessionId, null);
 
         const message =
@@ -272,12 +296,40 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    // Setup listener for browser closed events from main process
+    // Setup listener for browser closed events from main process (legacy)
     const listenerCleanup = (window as any).prxApi.playwright.onBrowserClosed(
       (sessionId: string) => {
         console.log(`[Context] Browser closed notification for: ${sessionId}`);
-        setOpenBrowsers((prev) => prev.filter((id) => id !== sessionId));
+        setBrowserStatuses((prev) => {
+          const next = { ...prev };
+          delete next[sessionId];
+          return next;
+        });
         setSessionLog(sessionId, null);
+      },
+    );
+
+    // Setup listener for browser status change events (primary)
+    const statusCleanup = (
+      window as any
+    ).prxApi.playwright.onBrowserStatusChanged(
+      (data: { sessionId: string; status: string }) => {
+        console.log(
+          `[Context] Browser status changed: ${data.sessionId} → ${data.status}`,
+        );
+        if (data.status === "closed") {
+          setBrowserStatuses((prev) => {
+            const next = { ...prev };
+            delete next[data.sessionId];
+            return next;
+          });
+          setSessionLog(data.sessionId, null);
+        } else {
+          setBrowserStatuses((prev) => ({
+            ...prev,
+            [data.sessionId]: data.status as BrowserStatus,
+          }));
+        }
       },
     );
 
@@ -286,8 +338,32 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const result = await (
           window as any
         ).prxApi.playwright.listConnections();
-        if (result.success && result.sessions) {
-          setOpenBrowsers(result.sessions);
+        if (result.success) {
+          const serverSessions = new Set<string>(result.sessions || []);
+          const serverStatuses: Record<string, string> =
+            result.statuses || {};
+
+          setBrowserStatuses((prev) => {
+            const next = { ...prev };
+
+            // Remove entries the server doesn't know about
+            // (but preserve 'launching' state for browsers not yet registered)
+            for (const id of Object.keys(next)) {
+              if (!serverSessions.has(id) && next[id] !== "launching") {
+                delete next[id];
+              }
+            }
+
+            // Add/update entries from server
+            for (const id of serverSessions) {
+              if (!next[id] || next[id] === "launching") {
+                next[id] =
+                  (serverStatuses[id] as BrowserStatus) || "open";
+              }
+            }
+
+            return next;
+          });
         }
       } catch (err) {
         console.warn("[Context] Failed to sync active browsers:", err);
@@ -310,6 +386,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     return () => {
       listenerCleanup();
+      statusCleanup();
       if (heartbeatInterval) clearInterval(heartbeatInterval);
     };
   }, [isAuthenticated, fetchSessions, setSessionLog]);
@@ -329,6 +406,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     isClosing,
     transitioningSessions,
     openBrowsers,
+    browserStatuses,
     launchSessionBrowser,
     closeSessionBrowser,
     showSessionPortal,

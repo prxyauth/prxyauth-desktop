@@ -24,6 +24,27 @@ const connectedBrowsers: Map<
 // Store for proxy bridges (authenticated proxy tunnels)
 const proxyBridges: Map<string, string> = new Map();
 
+// Browser session status tracking (launching → open → closed)
+const browserSessionStatuses: Map<string, string> = new Map();
+
+function emitBrowserStatus(sessionId: string, status: string) {
+  console.log(`[Main] emitBrowserStatus: ${sessionId} → ${status}`);
+  if (status === "closed") {
+    browserSessionStatuses.delete(sessionId);
+  } else {
+    browserSessionStatuses.set(sessionId, status);
+  }
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    console.log(`[Main] Sending browserStatusChanged IPC to renderer`);
+    mainWindow.webContents.send("playwright:browserStatusChanged", {
+      sessionId,
+      status,
+    });
+  } else {
+    console.warn(`[Main] mainWindow not available, cannot send status event`);
+  }
+}
+
 // Development port - must match vite --port in package.json
 const DEV_PORT = 5180;
 
@@ -74,10 +95,11 @@ ipcMain.handle(
       const browser = await chromium.connect(wsEndpoint);
 
       // Listen for browser disconnection (remote server closes or connection lost)
-      browser.on("disconnected", () => {
+      browser.on("disconnected", async () => {
         console.log(`Remote browser disconnected for session: ${sessionId}`);
         connectedBrowsers.delete(sessionId);
-        // Notify renderer that browser was closed
+        // Notify UI immediately, before slow cleanup
+        emitBrowserStatus(sessionId, "closed");
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send("playwright:browserClosed", {
             sessionId,
@@ -222,6 +244,7 @@ async function terminateBrowser(sessionId: string): Promise<boolean> {
     // Fallback cleanup if close fails
     connectedBrowsers.delete(sessionId);
     await cleanupProxyBridge(sessionId);
+    emitBrowserStatus(sessionId, "closed");
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send("playwright:browserClosed", { sessionId });
     }
@@ -1367,6 +1390,8 @@ ipcMain.handle(
       console.log(`UserAgent to apply: ${fingerprint?.userAgent}`);
       console.log(`Proxy data received:`, JSON.stringify(proxy, null, 2));
 
+      emitBrowserStatus(sessionId, "launching");
+
       // Prepare proxy (returns object with server, username, password)
       const proxyConfig = await prepareProxy(sessionId, proxy);
 
@@ -1393,14 +1418,15 @@ ipcMain.handle(
       browser.on("disconnected", async () => {
         console.log(`Browser disconnected for session: ${sessionId}`);
         connectedBrowsers.delete(sessionId);
-        // Cleanup proxy bridge
-        await cleanupProxyBridge(sessionId);
-        // Notify renderer that browser was closed
+        // Notify UI immediately, before slow cleanup
+        emitBrowserStatus(sessionId, "closed");
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send("playwright:browserClosed", {
             sessionId,
           });
         }
+        // Cleanup proxy bridge after notifying (can be slow)
+        await cleanupProxyBridge(sessionId);
       });
 
       const context = await browser.newContext({
@@ -1456,6 +1482,7 @@ ipcMain.handle(
 
       // Store the connection
       connectedBrowsers.set(sessionId, { browser, context, page });
+      emitBrowserStatus(sessionId, "open");
 
       return { success: true, message: "Local browser launched" };
     } catch (error) {
@@ -1524,9 +1551,39 @@ ipcMain.handle("playwright:bringToFront", async (event, { sessionId }) => {
  * List active connections
  */
 ipcMain.handle("playwright:listConnections", async () => {
+  // Validate liveness of all tracked browsers
+  const liveSessions: string[] = [];
+  const deadSessions: string[] = [];
+
+  for (const [sessionId, connection] of connectedBrowsers) {
+    try {
+      if (connection.browser.isConnected()) {
+        liveSessions.push(sessionId);
+      } else {
+        deadSessions.push(sessionId);
+      }
+    } catch {
+      deadSessions.push(sessionId);
+    }
+  }
+
+  // Clean up stale entries discovered during heartbeat
+  for (const sessionId of deadSessions) {
+    console.log(
+      `[Main] Heartbeat cleanup: stale browser for session ${sessionId}`,
+    );
+    connectedBrowsers.delete(sessionId);
+    emitBrowserStatus(sessionId, "closed");
+    cleanupProxyBridge(sessionId);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("playwright:browserClosed", { sessionId });
+    }
+  }
+
   return {
     success: true,
-    sessions: Array.from(connectedBrowsers.keys()),
+    sessions: liveSessions,
+    statuses: Object.fromEntries(browserSessionStatuses),
   };
 });
 

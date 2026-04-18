@@ -53,12 +53,12 @@ export function StatusBadge({ status, size = "md" }: StatusBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center font-black uppercase tracking-[0.15em] rounded-full border transition-all",
+        "inline-flex w-fit items-center font-black uppercase tracking-[0.15em] rounded-full border transition-all",
         size === "sm" ? "px-2.5 py-1 text-[9px]" : "px-3.5 py-1.5 text-[11px]",
         config.className,
       )}
     >
-      <span className="w-1 h-1 rounded-full bg-current mr-2 shadow-[0_0_5px_currentColor]" />
+      <span className="w-1 h-1 rounded-full shrink-0 bg-current mr-2 shadow-[0_0_5px_currentColor]" />
       {config.label}
     </span>
   );

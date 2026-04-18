@@ -41,6 +41,7 @@ export function DashboardView({
     isClosing,
     transitioningSessions,
     openBrowsers,
+    browserStatuses,
   } = useSessions();
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
@@ -189,6 +190,7 @@ export function DashboardView({
         isClosingId={isClosing}
         transitioningSessions={transitioningSessions}
         openBrowsers={openBrowsers}
+        browserStatuses={browserStatuses}
         onDetail={handleOpenDetail}
         viewMode={viewMode}
       />

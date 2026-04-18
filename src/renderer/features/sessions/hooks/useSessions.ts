@@ -2,7 +2,7 @@
  * useSessions Hook
  */
 
-import { useSessionContext } from "../context/SessionContext";
+import { useSessionContext, BrowserStatus } from "../context/SessionContext";
 import { Session } from "@core/types";
 
 export interface UseSessionsReturn {
@@ -20,6 +20,7 @@ export interface UseSessionsReturn {
     isClosing: string | null;
     transitioningSessions: Record<string, { status: string; logs: string[] }>;
     openBrowsers: string[];
+    browserStatuses: Record<string, BrowserStatus>;
     launchSessionBrowser: (sessionId: string) => Promise<void>;
     closeSessionBrowser: (sessionId: string) => Promise<void>;
     showSessionPortal: (sessionId: string) => Promise<void>;

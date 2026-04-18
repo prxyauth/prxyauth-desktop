@@ -37,6 +37,7 @@ interface SessionCardProps {
   isClosing?: boolean;
   transitionData?: { status: string; logs: string[] };
   isBrowserOpen?: boolean;
+  browserStatus?: string;
   variant?: "grid" | "list";
   isSelected?: boolean;
   onToggleSelection?: () => void;
@@ -83,6 +84,7 @@ export function SessionCard({
   isClosing,
   transitionData,
   isBrowserOpen,
+  browserStatus,
   variant = "grid",
   isSelected,
   onToggleSelection,
@@ -214,18 +216,30 @@ export function SessionCard({
             </button>
           )}
 
-          {isBrowserOpen ? (
+          {browserStatus === 'launching' ? (
+            <button
+              disabled
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-500/10 text-amber-400 text-[10px] font-black uppercase tracking-widest transition-all border border-amber-500/20 opacity-80 cursor-not-allowed"
+            >
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              Launching
+            </button>
+          ) : isBrowserOpen ? (
             <button
               onClick={() => onCloseBrowser?.(session.id)}
               disabled={!!transitionData || isClosing}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 text-[10px] font-black uppercase tracking-widest transition-all border border-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-orange-500/10 text-emerald-400 hover:text-orange-400 text-[10px] font-black uppercase tracking-widest transition-all border border-emerald-500/20 hover:border-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed group/stop"
             >
               {transitionData || isClosing ? (
-               <RefreshCw className="w-4 h-4 animate-spin" />
+                <RefreshCw className="w-4 h-4 animate-spin" />
               ) : (
-                <RefreshCw className="w-4 h-4" />
+                <>
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(52,211,153,0.5)] group-hover/stop:hidden" />
+                  <RefreshCw className="w-4 h-4 hidden group-hover/stop:block" />
+                </>
               )}
-              Stop
+              <span className="group-hover/stop:hidden">Active</span>
+              <span className="hidden group-hover/stop:inline">Stop</span>
             </button>
           ) : (
             <button
@@ -455,18 +469,30 @@ export function SessionCard({
             </button>
           )}
 
-          {isBrowserOpen ? (
+          {browserStatus === 'launching' ? (
+            <button
+              disabled
+              className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-amber-500/20 text-amber-400 text-[10px] font-black uppercase tracking-[0.2em] transition-all border border-amber-500/20 opacity-80 cursor-not-allowed"
+            >
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              Launching Browser
+            </button>
+          ) : isBrowserOpen ? (
             <button
               onClick={() => onCloseBrowser?.(session.id)}
               disabled={!!transitionData || isClosing}
-              className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-orange-500 text-white text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-[0_10px_20px_rgba(249,115,22,0.25)] hover:shadow-[0_15px_30px_rgba(249,115,22,0.4)] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-emerald-500/10 hover:bg-orange-500 text-emerald-400 hover:text-white text-[10px] font-black uppercase tracking-[0.2em] transition-all border border-emerald-500/20 hover:border-orange-500 hover:shadow-[0_10px_20px_rgba(249,115,22,0.25)] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group/stop"
             >
               {transitionData || isClosing ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />
               ) : (
-                <RefreshCw className="w-4 h-4" />
+                <>
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.5)] group-hover/stop:hidden" />
+                  <RefreshCw className="w-4 h-4 hidden group-hover/stop:block" />
+                </>
               )}
-              {transitionData?.status || "Stop Browser"}
+              <span className="group-hover/stop:hidden">{transitionData?.status || "Browser Active"}</span>
+              <span className="hidden group-hover/stop:inline">{transitionData?.status || "Stop Browser"}</span>
             </button>
           ) : (
             <button
