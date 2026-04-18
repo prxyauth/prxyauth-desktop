@@ -158,26 +158,8 @@ export function SessionCard({
           </div>
         </div>
 
-        {/* Proxy Column */}
-        <div className="hidden lg:flex w-48 shrink-0 flex-col">
-          {session.proxy?.externalIp ? (
-            <>
-              <div className="flex items-center gap-1.5 text-[11px] font-bold text-primary/80">
-                <Globe className="w-3 h-3" />
-                <span>{session.proxy.externalIp}</span>
-              </div>
-              <span className="text-[9px] text-gray-500 uppercase tracking-widest mt-0.5 truncate">
-                {session.proxy.city || "Unknown"},{" "}
-                {session.proxy.country || "Secure"}
-              </span>
-            </>
-          ) : (
-            <span className="text-[10px] text-gray-600 italic">No Proxy</span>
-          )}
-        </div>
-
         {/* Status/Transition Column */}
-        <div className="hidden xl:flex w-48 shrink-0 flex-col justify-center">
+        <div className="hidden lg:flex w-48 shrink-0 flex-col justify-center">
           {transitionData ? (
             <div className="space-y-1">
               <div className="flex items-center gap-2">

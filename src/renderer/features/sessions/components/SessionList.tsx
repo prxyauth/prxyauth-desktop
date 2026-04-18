@@ -222,9 +222,8 @@ export function SessionList({
                 {viewMode === "list" && (
                     <div className="flex items-center gap-6 px-6 py-4 border-b border-white/5 text-[9px] font-black uppercase tracking-[0.35em] text-gray-500 mb-2 pl-12">
                         <div className="w-12 shrink-0">ID</div>
-                        <div className="flex-1 min-w-0">Account Identity / Provider</div>
-                        <div className="hidden lg:block w-48 shrink-0">Secure Network</div>
-                        <div className="hidden xl:block w-48 shrink-0">Browser State</div>
+                        <div className="flex-1 min-w-0">Account / Provider</div>
+                        <div className="hidden lg:block w-48 shrink-0">Browser State</div>
                         <div className="w-64 shrink-0 text-right">Operation Console</div>
                     </div>
                 )}
