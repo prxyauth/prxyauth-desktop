@@ -143,6 +143,44 @@ function InfoCard({
     );
 }
 
+// User Agent block with copy button
+function UserAgentBlock({ value }: { value?: string }) {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = () => {
+        if (!value) return;
+        navigator.clipboard.writeText(value);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <div className="group relative p-4 bg-black/30 rounded-xl border border-white/5 hover:border-white/10 transition-all">
+            <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-500">
+                    User Agent
+                </p>
+                {value && (
+                    <button
+                        onClick={handleCopy}
+                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-white/10 transition-all"
+                        title="Copy User Agent"
+                    >
+                        {copied ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                            <Copy className="w-3.5 h-3.5 text-gray-400" />
+                        )}
+                    </button>
+                )}
+            </div>
+            <p className="text-xs text-gray-300 font-mono break-all leading-relaxed">
+                {value || "—"}
+            </p>
+        </div>
+    );
+}
+
 // Section component
 function Section({
     title,
@@ -441,14 +479,7 @@ export function SessionDetailPage({ sessionId, onBack }: SessionDetailPageProps)
                         {/* Browser Identity */}
                         <Section title="Browser Identity" icon={Fingerprint} color="text-cyan-400">
                             <div className="space-y-4">
-                                <div className="p-4 bg-black/30 rounded-xl border border-white/5">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-500 mb-2">
-                                        User Agent
-                                    </p>
-                                    <p className="text-xs text-gray-300 font-mono break-all leading-relaxed">
-                                        {fp.userAgent}
-                                    </p>
-                                </div>
+                                <UserAgentBlock value={fp.userAgent} />
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                                     <InfoCard icon={Monitor} label="Platform" value={fp.userAgentMetadata?.platform} />
