@@ -390,14 +390,6 @@ export function SessionDetailPage({ sessionId, onBack }: SessionDetailPageProps)
                         )}
                         <InfoCard icon={Shield} label="Session ID" value={session.id} mono />
                         <InfoCard icon={Clock} label="Created" value={formatDate(session.createdAt)} />
-                        <InfoCard icon={Clock} label="Expires" value={formatDate(session.expiresAt)} />
-                        {session.browserMode && (
-                            <InfoCard
-                                icon={Monitor}
-                                label="Browser Mode"
-                                value={session.browserMode?.toUpperCase()}
-                            />
-                        )}
                         {session.ipAddress && (
                             <InfoCard icon={Server} label="IP Address" value={session.ipAddress} mono />
                         )}
