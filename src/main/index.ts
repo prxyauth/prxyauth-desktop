@@ -811,9 +811,29 @@ ipcMain.handle(
         ignoreHTTPSErrors: true,
       });
 
+      // Monitor context for user closure
+      context.on("close", async () => {
+        console.log(`[Main] Context closed for session: ${sessionId}`);
+        await terminateBrowser(sessionId);
+      });
+
       // Override default new tab behavior to visit Google.com
       let isFirstPage = true;
       context.on("page", async (newPage) => {
+        // Detect if all pages are closed (user closes window)
+        newPage.on("close", async () => {
+          setTimeout(async () => {
+            try {
+              if (context.pages().length === 0) {
+                console.log(`[Main] All pages closed for session: ${sessionId}`);
+                await terminateBrowser(sessionId);
+              }
+            } catch (e) {
+              // Ignore if context is destroyed
+            }
+          }, 100);
+        });
+
         if (isFirstPage) {
           isFirstPage = false;
           return;
