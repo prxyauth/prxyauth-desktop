@@ -811,6 +811,34 @@ ipcMain.handle(
         ignoreHTTPSErrors: true,
       });
 
+      // Override default new tab behavior to visit Google.com
+      let isFirstPage = true;
+      context.on("page", async (newPage) => {
+        if (isFirstPage) {
+          isFirstPage = false;
+          return;
+        }
+
+        const handleNewTab = async () => {
+          try {
+            if (newPage.isClosed()) return;
+            const url = newPage.url();
+            if (
+              url === "about:blank" ||
+              url.startsWith("chrome://newtab") ||
+              url.startsWith("chrome://new-tab-page")
+            ) {
+              await newPage.goto("https://google.com").catch(() => {});
+            }
+          } catch (e) {
+            // Ignore if closed or navigation fails
+          }
+        };
+
+        handleNewTab();
+        newPage.on("domcontentloaded", handleNewTab);
+      });
+
       // [DETECTION BYPASS] Google detection of browser tampering is extremely aggressive.
       // We skip JS-based fingerprint injection for Google to favor native browser properties.
       const isGoogle =
