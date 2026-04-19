@@ -33,5 +33,6 @@ jobs:
         run: pnpm run electron:build -- --publish always
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_FRONTEND_URL: ${{ secrets.VITE_FRONTEND_URL }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

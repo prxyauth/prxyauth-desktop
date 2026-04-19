@@ -128,6 +128,7 @@ contextBridge.exposeInMainWorld("prxApi", {
       proxy?: Proxy,
       fingerprint?: Fingerprint,
       session?: { email?: string; password?: string },
+      frontendUrl?: string,
     ): Promise<ApiResult> =>
       ipcRenderer.invoke("playwright:launchLocal", {
         sessionId,
@@ -135,6 +136,7 @@ contextBridge.exposeInMainWorld("prxApi", {
         proxy,
         fingerprint,
         session,
+        frontendUrl,
       }),
 
     bringToFront: (sessionId: string): Promise<ApiResult> =>
@@ -149,6 +151,7 @@ contextBridge.exposeInMainWorld("prxApi", {
       proxy?: Proxy,
       fingerprint?: Fingerprint,
       session?: { email?: string; password?: string },
+      frontendUrl?: string,
     ): Promise<ApiResult> =>
       ipcRenderer.invoke("playwright:showPortal", {
         sessionId,
@@ -156,6 +159,7 @@ contextBridge.exposeInMainWorld("prxApi", {
         proxy,
         fingerprint,
         session,
+        frontendUrl,
       }),
 
     // Event listener for browser closed events
@@ -246,6 +250,7 @@ declare global {
           proxy?: Proxy,
           fingerprint?: Fingerprint,
           session?: { email?: string; password?: string },
+          frontendUrl?: string,
         ) => Promise<ApiResult>;
         bringToFront: (sessionId: string) => Promise<ApiResult>;
         closeLocal: (sessionId: string) => Promise<ApiResult>;
@@ -255,6 +260,7 @@ declare global {
           proxy?: Proxy,
           fingerprint?: Fingerprint,
           session?: { email?: string; password?: string },
+          frontendUrl?: string,
         ) => Promise<ApiResult>;
         onBrowserClosed: (callback: (sessionId: string) => void) => () => void;
         onBrowserStatusChanged: (

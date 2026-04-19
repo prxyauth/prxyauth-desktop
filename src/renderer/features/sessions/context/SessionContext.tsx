@@ -193,12 +193,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           "Launching",
           "Applying anti-detection fingerprints...",
         );
+        const frontendUrl = localStorage.getItem("prx_frontend_url") || import.meta.env.VITE_FRONTEND_URL || "http://localhost:3000";
         const result = await (window as any).prxApi.playwright.launchLocal(
           sessionId,
           storageState,
           session.proxy,
           session.fingerprint,
           { email: session.email },
+          frontendUrl
         );
 
         if (!result.success) {
@@ -275,12 +277,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const session = sessions.find((s) => s.id === sessionId);
         if (!session) throw new Error("Session not found");
 
+        const frontendUrl = localStorage.getItem("prx_frontend_url") || import.meta.env.VITE_FRONTEND_URL || "http://localhost:3000";
         const result = await (window as any).prxApi.playwright.showPortal(
           sessionId,
           null,
           session.proxy,
           session.fingerprint,
           { email: session.email },
+          frontendUrl
         );
 
         if (!result.success) {
