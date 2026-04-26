@@ -181,12 +181,24 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const session = await sessionApi.get(sessionId);
         if (!session) throw new Error("Session not found");
 
+        let result: any;
+
         setSessionLog(
           sessionId,
           "Data Sync",
           "Exporting browser storage state...",
         );
-        const storageState = await sessionApi.exportBrowserState(sessionId);
+
+        // Browser state may be missing for some sessions (e.g. incomplete sync)
+        let storageState: any = null;
+        try {
+          storageState = await sessionApi.exportBrowserState(sessionId);
+        } catch (exportErr) {
+          console.warn(
+            `[Context] Browser state unavailable for ${sessionId}, launching with empty state`,
+            exportErr,
+          );
+        }
 
         setSessionLog(
           sessionId,
@@ -194,7 +206,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           "Applying anti-detection fingerprints...",
         );
         const frontendUrl = localStorage.getItem("prx_frontend_url") || import.meta.env.VITE_FRONTEND_URL || "http://localhost:3000";
-        const result = await (window as any).prxApi.playwright.launchLocal(
+        result = await (window as any).prxApi.playwright.launchLocal(
           sessionId,
           storageState,
           session.proxy,
@@ -204,7 +216,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         );
 
         if (!result.success) {
-          throw new Error(result.error || "Failed to launch local browser");
+          throw new Error(result.error || "Failed to launch browser");
         }
 
         // Main process will emit 'open' status via browserStatusChanged event

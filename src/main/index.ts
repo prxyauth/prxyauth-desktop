@@ -754,40 +754,32 @@ ipcMain.handle(
 
       const locale = fingerprint?.language || "en-US";
 
-      const browser = await chromium.launch({
-        executablePath: BrowserManager.getInstance().getExecutablePath(),
+      // Prefer system-installed Chrome for best anti-detection;
+      // fall back to bundled Chromium if Chrome is not available.
+      // Use a persistent profile directory so Chrome Sync, bookmarks,
+      // passwords, and extensions survive between launches.
+      const launchArgs = [
+        "--disable-blink-features=AutomationControlled",
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-infobars",
+        "--window-position=0,0",
+        "--no-first-run",
+        "--no-default-browser-check",
+        `--lang=${locale}`,
+        `--accept-lang=${locale}`,
+      ];
+
+      const profileDir = path.join(app.getPath("userData"), "chrome-profiles", sessionId);
+      const fs = await import("fs");
+      fs.mkdirSync(profileDir, { recursive: true });
+
+      console.log(`[Main] Using persistent profile: ${profileDir}`);
+
+      const contextOptions: any = {
         headless: false,
-        args: [
-          "--disable-blink-features=AutomationControlled",
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-          "--disable-dev-shm-usage",
-          "--disable-infobars",
-          "--window-position=0,0",
-          "--no-first-run",
-          "--no-default-browser-check",
-          `--lang=${locale}`,
-          `--accept-lang=${locale}`,
-        ],
-      });
-
-      // Listen for browser disconnection (user closes browser directly)
-      browser.on("disconnected", async () => {
-        console.log(`Browser disconnected for session: ${sessionId}`);
-        connectedBrowsers.delete(sessionId);
-        // Notify UI immediately, before slow cleanup
-        emitBrowserStatus(sessionId, "closed");
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send("playwright:browserClosed", {
-            sessionId,
-          });
-        }
-        // Cleanup proxy bridge after notifying (can be slow)
-        await cleanupProxyBridge(sessionId);
-      });
-
-      const context = await browser.newContext({
-        storageState: storageState || undefined,
+        args: launchArgs,
         viewport: fingerprint?.viewport || { width: 1280, height: 720 },
         userAgent: fingerprint?.userAgent,
         deviceScaleFactor: fingerprint?.deviceScaleFactor || 1,
@@ -809,12 +801,69 @@ ipcMain.handle(
           : undefined,
         bypassCSP: true,
         ignoreHTTPSErrors: true,
-      });
+      };
 
-      // Monitor context for user closure
+      let context: BrowserContext;
+      try {
+        context = await chromium.launchPersistentContext(profileDir, {
+          channel: "chrome",
+          ...contextOptions,
+        });
+        console.log("[Main] Launched persistent Chrome context");
+      } catch (chromeErr) {
+        console.warn(
+          "[Main] System Chrome not found, falling back to bundled Chromium:",
+          (chromeErr as Error).message,
+        );
+        context = await chromium.launchPersistentContext(profileDir, {
+          executablePath: BrowserManager.getInstance().getExecutablePath(),
+          ...contextOptions,
+        });
+        console.log("[Main] Launched persistent Chromium context");
+      }
+
+      const browser = context.browser();
+
+      // Inject session cookies from storageState into the persistent context
+      // (on first launch these seed the profile; on subsequent launches
+      // Chrome's own cookie store already has them)
+      if (storageState?.cookies?.length) {
+        try {
+          await context.addCookies(storageState.cookies);
+          console.log(`[Main] Injected ${storageState.cookies.length} cookies into persistent profile`);
+        } catch (cookieErr) {
+          console.warn("[Main] Failed to inject cookies:", cookieErr);
+        }
+      }
+
+      // Listen for browser disconnection (user closes browser directly)
+      if (browser) {
+        browser.on("disconnected", async () => {
+          console.log(`Browser disconnected for session: ${sessionId}`);
+          connectedBrowsers.delete(sessionId);
+          // Notify UI immediately, before slow cleanup
+          emitBrowserStatus(sessionId, "closed");
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send("playwright:browserClosed", {
+              sessionId,
+            });
+          }
+          // Cleanup proxy bridge after notifying (can be slow)
+          await cleanupProxyBridge(sessionId);
+        });
+      }
+
+      // Context close handler
       context.on("close", async () => {
         console.log(`[Main] Context closed for session: ${sessionId}`);
-        await terminateBrowser(sessionId);
+        connectedBrowsers.delete(sessionId);
+        emitBrowserStatus(sessionId, "closed");
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send("playwright:browserClosed", {
+            sessionId,
+          });
+        }
+        await cleanupProxyBridge(sessionId);
       });
 
       // Override default new tab behavior to visit Google.com
@@ -874,13 +923,15 @@ ipcMain.handle(
         });
       }
 
-      const page = await context.newPage();
+      // Use existing page or create new one
+      const pages = context.pages();
+      const page = pages.length > 0 ? pages[0] : await context.newPage();
 
       const baseUrl = frontendUrl || "http://localhost:3000";
       await page.goto(`${baseUrl}/portal/${sessionId}`);
 
       // Store the connection
-      connectedBrowsers.set(sessionId, { browser, context, page });
+      connectedBrowsers.set(sessionId, { browser: browser || ({} as Browser), context, page });
       emitBrowserStatus(sessionId, "open");
 
       return { success: true, message: "Local browser launched" };
@@ -940,6 +991,177 @@ ipcMain.handle("playwright:bringToFront", async (event, { sessionId }) => {
     };
   }
 });
+
+/**
+ * Launch Chrome with a persistent user-data-dir for full Chrome Sync support.
+ * Instead of calling the backend, this launches Chrome locally using Playwright's
+ * launchPersistentContext, which preserves Chrome Sync data, bookmarks, passwords,
+ * and extensions between sessions.
+ */
+ipcMain.handle(
+  "playwright:launchSyncedProfile",
+  async (
+    event,
+    { sessionId, apiBaseUrl, authToken },
+  ) => {
+    try {
+      // Check if already open
+      const existing = connectedBrowsers.get(sessionId);
+      if (existing) {
+        try {
+          await existing.page.bringToFront();
+          return { success: true, message: "Reused existing synced profile browser" };
+        } catch {
+          connectedBrowsers.delete(sessionId);
+        }
+      }
+
+      console.log(`[Main] Launching Chrome with persistent profile for session: ${sessionId}`);
+      emitBrowserStatus(sessionId, "launching");
+
+      // Create a persistent profile directory under the app's userData
+      const profileDir = path.join(app.getPath("userData"), "chrome-profiles", sessionId);
+      const fs = await import("fs");
+      fs.mkdirSync(profileDir, { recursive: true });
+
+      console.log(`[Main] Using profile directory: ${profileDir}`);
+
+      // Launch Chrome with a persistent context (user-data-dir)
+      // This preserves Chrome Sync, bookmarks, passwords, extensions across sessions
+      let context: BrowserContext;
+      try {
+        context = await chromium.launchPersistentContext(profileDir, {
+          channel: "chrome",
+          headless: false,
+          args: [
+            "--disable-blink-features=AutomationControlled",
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-infobars",
+            "--window-position=0,0",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--lang=en-US",
+            "--accept-lang=en-US",
+          ],
+          viewport: { width: 1280, height: 720 },
+          ignoreHTTPSErrors: true,
+          bypassCSP: true,
+        });
+        console.log("[Main] Launched persistent Chrome context");
+      } catch (chromeErr) {
+        console.warn(
+          "[Main] System Chrome not found for persistent context, trying bundled Chromium:",
+          (chromeErr as Error).message,
+        );
+        context = await chromium.launchPersistentContext(profileDir, {
+          executablePath: BrowserManager.getInstance().getExecutablePath(),
+          headless: false,
+          args: [
+            "--disable-blink-features=AutomationControlled",
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-infobars",
+            "--window-position=0,0",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--lang=en-US",
+            "--accept-lang=en-US",
+          ],
+          viewport: { width: 1280, height: 720 },
+          ignoreHTTPSErrors: true,
+          bypassCSP: true,
+        });
+        console.log("[Main] Launched persistent Chromium context");
+      }
+
+      // Get the browser from the context
+      const browser = context.browser()!;
+
+      // Listen for disconnection
+      if (browser) {
+        browser.on("disconnected", async () => {
+          console.log(`[Main] Synced profile browser disconnected: ${sessionId}`);
+          connectedBrowsers.delete(sessionId);
+          emitBrowserStatus(sessionId, "closed");
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send("playwright:browserClosed", {
+              sessionId,
+            });
+          }
+        });
+      }
+
+      // Context close handler
+      context.on("close", async () => {
+        console.log(`[Main] Persistent context closed for session: ${sessionId}`);
+        connectedBrowsers.delete(sessionId);
+        emitBrowserStatus(sessionId, "closed");
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send("playwright:browserClosed", {
+            sessionId,
+          });
+        }
+      });
+
+      // Get existing page or create one
+      const pages = context.pages();
+      const page = pages.length > 0 ? pages[0] : await context.newPage();
+
+      // Inject session cookies from the backend on first launch
+      // (subsequent launches will use Chrome's own persistent cookie store)
+      const currentUrl = page.url();
+      const isFirstLaunch = currentUrl === "about:blank" || currentUrl === "chrome://newtab/" || currentUrl === "data:,";
+
+      if (isFirstLaunch && apiBaseUrl && authToken) {
+        try {
+          console.log(`[Main] Fetching session cookies from backend for ${sessionId}...`);
+          const stateResp = await fetch(
+            `${apiBaseUrl}/api/sessions/${sessionId}/export-state`,
+            {
+              headers: { Authorization: `Bearer ${authToken}` },
+            },
+          );
+
+          if (stateResp.ok) {
+            const stateData: any = await stateResp.json();
+            if (stateData.success && stateData.data?.cookies?.length) {
+              await context.addCookies(stateData.data.cookies);
+              console.log(
+                `[Main] Injected ${stateData.data.cookies.length} cookies into persistent profile`,
+              );
+            }
+          } else {
+            console.warn(`[Main] Could not fetch session cookies: ${stateResp.status}`);
+          }
+        } catch (cookieErr) {
+          console.warn("[Main] Failed to inject session cookies:", cookieErr);
+        }
+
+        // Navigate to Google account page (user will be signed in via cookies)
+        await page.goto("https://myaccount.google.com").catch(() => {});
+      }
+
+      connectedBrowsers.set(sessionId, { browser: browser || ({} as Browser), context, page });
+      emitBrowserStatus(sessionId, "open");
+
+      return {
+        success: true,
+        message: "Chrome launched with persistent profile",
+      };
+    } catch (error) {
+      console.error("Failed to launch synced profile:", error);
+      emitBrowserStatus(sessionId, "closed");
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Failed to launch synced profile",
+      };
+    }
+  },
+);
 
 /**
  * List active connections

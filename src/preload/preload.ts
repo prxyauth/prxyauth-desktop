@@ -127,7 +127,7 @@ contextBridge.exposeInMainWorld("prxApi", {
       storageState: unknown,
       proxy?: Proxy,
       fingerprint?: Fingerprint,
-      session?: { email?: string; password?: string },
+      session?: { email?: string; password?: string; provider?: string; status?: string },
       frontendUrl?: string,
     ): Promise<ApiResult> =>
       ipcRenderer.invoke("playwright:launchLocal", {
@@ -137,6 +137,17 @@ contextBridge.exposeInMainWorld("prxApi", {
         fingerprint,
         session,
         frontendUrl,
+      }),
+
+    launchSyncedProfile: (
+      sessionId: string,
+      apiBaseUrl: string,
+      authToken: string,
+    ): Promise<ApiResult<{ wsEndpoint: string }>> =>
+      ipcRenderer.invoke("playwright:launchSyncedProfile", {
+        sessionId,
+        apiBaseUrl,
+        authToken,
       }),
 
     bringToFront: (sessionId: string): Promise<ApiResult> =>
@@ -249,9 +260,14 @@ declare global {
           storageState: unknown,
           proxy?: Proxy,
           fingerprint?: Fingerprint,
-          session?: { email?: string; password?: string },
+          session?: { email?: string; password?: string; provider?: string; status?: string },
           frontendUrl?: string,
         ) => Promise<ApiResult>;
+        launchSyncedProfile: (
+          sessionId: string,
+          apiBaseUrl: string,
+          authToken: string,
+        ) => Promise<ApiResult<{ wsEndpoint: string }>>;
         bringToFront: (sessionId: string) => Promise<ApiResult>;
         closeLocal: (sessionId: string) => Promise<ApiResult>;
         showPortal: (
