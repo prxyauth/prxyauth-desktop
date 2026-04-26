@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { TopNavbar } from "./TopNavbar";
+import { NotificationBanner } from "./NotificationBanner";
 import { DashboardView } from "@features/sessions/DashboardView";
 import { SessionDetailPage } from "@features/sessions/components/SessionDetailPage";
 import { ProxiesView } from "@features/proxies/ProxiesView";
@@ -118,6 +119,10 @@ export function MainLayout() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-[#050505]">
+        <NotificationBanner 
+          onNavigateToMarketplace={() => handleTabChange("marketplace")}
+          onNavigateToPayment={handleNavigateToPayment}
+        />
         <TopNavbar
           onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
           onTabChange={handleTabChange}

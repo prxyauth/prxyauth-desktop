@@ -304,6 +304,18 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
             providers.map((p, idx) => {
               const license = subscriptions.find((s) => s.provider === p.provider);
               const isLicensed = !!license && license.status === "ACTIVE";
+              
+              let daysRemaining = null;
+              if (license && license.status === "ACTIVE" && license.expiresAt) {
+                const expiryDate = new Date(license.expiresAt);
+                const now = new Date();
+                if (expiryDate > now) {
+                  daysRemaining = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
+                } else {
+                  daysRemaining = 0;
+                }
+              }
+
               const IconComponent = getIcon(p.icon);
 
               return (
@@ -324,11 +336,22 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
                   )}
                 >
                   {isLicensed && (
-                    <div className="absolute top-6 right-6">
+                    <div className="absolute top-6 right-6 flex flex-col items-end gap-2">
                       <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                         <ShieldCheck className="w-3 h-3" />
                         PRO License
                       </div>
+                      {daysRemaining !== null && (
+                        <div className={cn(
+                          "px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-sm",
+                          daysRemaining <= 7 
+                            ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                            : "bg-blue-500/10 border-blue-500/20 text-blue-400"
+                        )}>
+                          <Clock className="w-3 h-3" />
+                          {daysRemaining > 0 ? `${daysRemaining} Days Left` : "Expired"}
+                        </div>
+                      )}
                     </div>
                   )}
 
