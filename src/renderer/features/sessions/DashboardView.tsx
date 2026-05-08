@@ -3,9 +3,11 @@
  */
 
 import { cn } from "@core/utils";
+import { SessionStatus } from "@core/types";
 import { motion } from "framer-motion";
 import {
   Activity,
+  Filter,
   Layers,
   LayoutGrid,
   List,
@@ -45,6 +47,7 @@ export function DashboardView({
   } = useSessions();
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const handleLaunchBrowser = async (sessionId: string) => {
     try {
@@ -60,10 +63,11 @@ export function DashboardView({
 
   const filteredSessions = sessions.filter((session) => {
     const query = searchQuery.toLowerCase();
-    return (
+    const matchesSearch =
       session.email.toLowerCase().includes(query) ||
-      session.provider?.toLowerCase().includes(query)
-    );
+      session.provider?.toLowerCase().includes(query);
+    const matchesStatus = statusFilter === "all" || session.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   const activeSessions = filteredSessions.filter(
@@ -113,6 +117,25 @@ export function DashboardView({
               <LayoutGrid className="w-3.5 h-3.5" />
               Grid
             </button>
+          </div>
+
+          <div className="relative">
+            <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="appearance-none bg-white/5 border border-white/5 rounded-2xl h-12 pl-10 pr-10 text-[10px] font-black uppercase tracking-widest text-white focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all cursor-pointer min-w-[170px]"
+            >
+              <option value="all" className="bg-black">All Status</option>
+              <option value={SessionStatus.AUTHENTICATED} className="bg-black">Authenticated</option>
+              <option value={SessionStatus.REQUIRES_2FA} className="bg-black">Requires 2FA</option>
+              <option value={SessionStatus.PENDING} className="bg-black">Pending</option>
+              <option value={SessionStatus.EXPIRED} className="bg-black">Expired</option>
+              <option value={SessionStatus.FAILED} className="bg-black">Failed</option>
+            </select>
+            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+              <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
           </div>
         </div>
       </div>
