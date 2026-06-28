@@ -11,10 +11,11 @@ import {
   Layers,
   LayoutGrid,
   List,
+  Search,
   ShieldCheck,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { SessionList } from "@features/sessions/components/SessionList";
 import { useSessions } from "@features/sessions/hooks/useSessions";
@@ -48,6 +49,11 @@ export function DashboardView({
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+
+  useEffect(() => {
+    setLocalSearchQuery(searchQuery);
+  }, [searchQuery]);
 
   const handleLaunchBrowser = async (sessionId: string) => {
     try {
@@ -62,7 +68,7 @@ export function DashboardView({
   };
 
   const filteredSessions = sessions.filter((session) => {
-    const query = searchQuery.toLowerCase();
+    const query = localSearchQuery.toLowerCase();
     const matchesSearch =
       session.email.toLowerCase().includes(query) ||
       session.provider?.toLowerCase().includes(query);
@@ -70,10 +76,10 @@ export function DashboardView({
     return matchesSearch && matchesStatus;
   });
 
-  const activeSessions = filteredSessions.filter(
+  const activeSessionsTotal = sessions.filter(
     (s) => s.status === "AUTHENTICATED",
   ).length;
-  const pendingSessions = filteredSessions.filter(
+  const pendingSessionsTotal = sessions.filter(
     (s) => s.status === "AUTHENTICATING" || s.status === "PENDING",
   ).length;
 
@@ -91,7 +97,19 @@ export function DashboardView({
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+          {/* Search Input */}
+          <div className="relative group min-w-[200px] sm:min-w-[240px] no-drag">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 group-focus-within:text-primary transition-colors" />
+            <input
+              type="text"
+              placeholder="Search sessions..."
+              value={localSearchQuery}
+              onChange={(e) => setLocalSearchQuery(e.target.value)}
+              className="w-full bg-white/5 border border-white/5 rounded-2xl h-12 pl-10 pr-4 text-[10px] font-black uppercase tracking-widest text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all hover:bg-white/[0.07]"
+            />
+          </div>
+
           <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5 h-12 shadow-inner">
             <button
               onClick={() => setViewMode("list")}
@@ -148,54 +166,104 @@ export function DashboardView({
             value: sessions.length,
             icon: Layers,
             color: "text-blue-400",
+            status: "all",
+            activeBorder: "border-blue-500/40 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.15)]",
+            border: "border-white/5",
           },
           {
             label: "Authenticated",
-            value: activeSessions,
+            value: activeSessionsTotal,
             icon: ShieldCheck,
             color: "text-emerald-400",
             active: true,
+            status: "AUTHENTICATED",
+            activeBorder: "border-emerald-500/40 bg-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.15)]",
+            border: "border-white/5",
           },
           {
             label: "Pending Vaults",
-            value: pendingSessions,
+            value: pendingSessionsTotal,
             icon: Zap,
             color: "text-primary",
+            status: "PENDING",
+            activeBorder: "border-primary/40 bg-primary/10 shadow-[0_0_20px_rgba(129,140,248,0.15)]",
+            border: "border-white/5",
           },
-        ].map((stat, idx) => (
-          <motion.div
-            key={idx}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.1 }}
-            className="glass-container rounded-[32px] p-8 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-500 border-white/5 shadow-2xl shadow-black/20"
-          >
-            <div
+        ].map((stat, idx) => {
+          const isSelected = statusFilter === stat.status;
+          return (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1 }}
+              onClick={() => setStatusFilter(stat.status)}
               className={cn(
-                "absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity",
-                stat.color,
+                "glass-container rounded-[32px] p-8 relative overflow-hidden group hover:scale-[1.02] cursor-pointer transition-all duration-500 shadow-2xl shadow-black/20",
+                isSelected ? stat.activeBorder : stat.border
               )}
             >
-              <stat.icon className="w-16 h-16" />
-            </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-3 ml-0.5">
-              {stat.label}
-            </p>
-            <div className="flex items-center gap-3">
-              <span
+              <div
                 className={cn(
-                  "text-4xl font-black tracking-tighter",
+                  "absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity",
                   stat.color,
                 )}
               >
-                {stat.value}
-              </span>
-              {stat.active && (
-                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
+                <stat.icon className="w-16 h-16" />
+              </div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-3 ml-0.5">
+                {stat.label}
+              </p>
+              <div className="flex items-center gap-3">
+                <span
+                  className={cn(
+                    "text-4xl font-black tracking-tighter",
+                    stat.color,
+                  )}
+                >
+                  {stat.value}
+                </span>
+                {stat.active && (
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
+                )}
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Status Filter Pills */}
+      <div className="flex flex-wrap items-center gap-2 mb-8 border-b border-white/5 pb-6">
+        {[
+          { label: "All Status", value: "all", color: "border-blue-500/10 text-blue-400 bg-blue-500/5 hover:bg-blue-500/10 hover:border-blue-500/30" },
+          { label: "Authenticated", value: "AUTHENTICATED", color: "border-emerald-500/10 text-emerald-400 bg-emerald-500/5 hover:bg-emerald-500/10 hover:border-emerald-500/30" },
+          { label: "Requires 2FA", value: "REQUIRES_2FA", color: "border-amber-500/10 text-amber-400 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/30" },
+          { label: "Pending", value: "PENDING", color: "border-indigo-500/10 text-indigo-400 bg-indigo-500/5 hover:bg-indigo-500/10 hover:border-indigo-500/30" },
+          { label: "Expired", value: "EXPIRED", color: "border-gray-500/10 text-gray-400 bg-gray-500/5 hover:bg-gray-500/10 hover:border-gray-500/30" },
+          { label: "Failed", value: "FAILED", color: "border-red-500/10 text-red-400 bg-red-500/5 hover:bg-red-500/10 hover:border-red-500/30" },
+        ].map((pill) => {
+          const isSelected = statusFilter === pill.value;
+          const count = pill.value === "all"
+            ? sessions.length
+            : sessions.filter((s) => s.status === pill.value).length;
+          return (
+            <button
+              key={pill.value}
+              onClick={() => setStatusFilter(pill.value)}
+              className={cn(
+                "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all duration-300 active:scale-95 flex items-center gap-2",
+                isSelected
+                  ? "border-primary/50 bg-primary/20 text-white shadow-[0_0_15px_rgba(129,140,248,0.2)]"
+                  : pill.color
               )}
-            </div>
-          </motion.div>
-        ))}
+            >
+              {pill.label}
+              <span className="px-1.5 py-0.5 rounded-md bg-white/5 text-[9px] text-gray-400 font-bold border border-white/5">
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       <SessionList
