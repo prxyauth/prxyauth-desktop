@@ -394,11 +394,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     // Auto-poll sessions when there are PENDING or REQUIRES_2FA sessions.
-    // This ensures the UI updates when a background 2FA approval completes
-    // (e.g. device approval via Telegram notification) without manual refresh.
+    // Stops polling after 5 minutes to avoid endless requests on stuck sessions.
     let sessionPollInterval: any = null;
     if (isAuthenticated) {
+      const MAX_POLL_DURATION = 5 * 60 * 1000; // 5 minutes max
+      const pollStartTime = Date.now();
       const checkPending = () => {
+        if (Date.now() - pollStartTime > MAX_POLL_DURATION) {
+          clearInterval(sessionPollInterval);
+          return;
+        }
         const hasPending = sessionsRef.current.some(
           (s: any) => s.status === "PENDING" || s.status === "REQUIRES_2FA",
         );
