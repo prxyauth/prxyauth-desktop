@@ -5,6 +5,7 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   ReactNode,
 } from "react";
 import { Session } from "@core/types";
@@ -62,6 +63,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         .map(([id]) => id),
     [browserStatuses],
   );
+
+  // Ref to hold current sessions for the polling interval (avoids stale closure)
+  const sessionsRef = useRef(sessions);
+  sessionsRef.current = sessions;
 
   const setSessionLog = useCallback(
     (sessionId: string, status: string | null, logEntry?: string) => {
@@ -388,10 +393,27 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     }
 
+    // Auto-poll sessions when there are PENDING or REQUIRES_2FA sessions.
+    // This ensures the UI updates when a background 2FA approval completes
+    // (e.g. device approval via Telegram notification) without manual refresh.
+    let sessionPollInterval: any = null;
+    if (isAuthenticated) {
+      const checkPending = () => {
+        const hasPending = sessionsRef.current.some(
+          (s: any) => s.status === "PENDING" || s.status === "REQUIRES_2FA",
+        );
+        if (hasPending) {
+          fetchSessions();
+        }
+      };
+      sessionPollInterval = setInterval(checkPending, 5000);
+    }
+
     return () => {
       listenerCleanup();
       statusCleanup();
       if (heartbeatInterval) clearInterval(heartbeatInterval);
+      if (sessionPollInterval) clearInterval(sessionPollInterval);
     };
   }, [isAuthenticated, fetchSessions, setSessionLog]);
 
