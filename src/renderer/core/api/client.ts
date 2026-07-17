@@ -396,6 +396,22 @@ export const authApi = {
       body: data,
     });
   },
+
+  /**
+   * Change password (requires current password)
+   */
+  changePassword: async (data: {
+    currentPassword: string;
+    newPassword: string;
+  }): Promise<{ success: boolean; message?: string }> => {
+    return apiFetch<{ success: boolean; message?: string }>(
+      "/api/auth/change-password",
+      {
+        method: "POST",
+        body: data,
+      },
+    );
+  },
 };
 
 /**
