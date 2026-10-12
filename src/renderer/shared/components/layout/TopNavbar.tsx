@@ -1,11 +1,4 @@
-import {
-    User,
-    LogOut,
-    Search,
-    RefreshCw,
-    Settings,
-    Menu,
-} from "lucide-react";
+import { User, LogOut, Search, RefreshCw, Settings, Menu } from "lucide-react";
 import { cn } from "@core/utils";
 import { useAuth } from "@features/auth/hooks/useAuth";
 import { useSessions } from "@features/sessions/hooks/useSessions";
@@ -18,7 +11,13 @@ interface TopNavbarProps {
     onSearchChange?: (query: string) => void;
 }
 
-export function TopNavbar({ onToggleSidebar, onTabChange, activeTab, searchQuery, onSearchChange }: TopNavbarProps) {
+export function TopNavbar({
+    onToggleSidebar,
+    onTabChange,
+    activeTab,
+    searchQuery,
+    onSearchChange,
+}: TopNavbarProps) {
     const { user, logout: authLogout } = useAuth();
     const { refresh, isLoading } = useSessions();
 
@@ -71,7 +70,7 @@ export function TopNavbar({ onToggleSidebar, onTabChange, activeTab, searchQuery
                     {user && (
                         <div className="hidden xl:flex flex-col items-end">
                             <span className="text-[11px] font-black text-white leading-none">
-                                {user.email.split('@')[0]}
+                                {user.email.split("@")[0]}
                             </span>
                             <span className="text-[9px] font-black text-primary/60 uppercase tracking-widest mt-1">
                                 Pro Member
@@ -88,8 +87,12 @@ export function TopNavbar({ onToggleSidebar, onTabChange, activeTab, searchQuery
                         <div className="absolute right-0 top-full pt-2 w-48 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-300 translate-y-2 group-hover:translate-y-0 z-[110]">
                             <div className="glass-container rounded-2xl p-2 border border-white/10 shadow-2xl">
                                 <div className="px-4 py-3 border-b border-white/5 xl:hidden">
-                                    <p className="text-[9px] text-gray-500 font-black uppercase mb-1 whitespace-nowrap">Signed in as</p>
-                                    <p className="text-[10px] text-white font-bold truncate">{user?.email}</p>
+                                    <p className="text-[9px] text-gray-500 font-black uppercase mb-1 whitespace-nowrap">
+                                        Signed in as
+                                    </p>
+                                    <p className="text-[10px] text-white font-bold truncate">
+                                        {user?.email}
+                                    </p>
                                 </div>
 
                                 <button

@@ -36,8 +36,8 @@ const containerVariants = {
         opacity: 1,
         transition: {
             staggerChildren: 0.05,
-        }
-    }
+        },
+    },
 };
 
 const itemVariants = {
@@ -49,28 +49,33 @@ const itemVariants = {
         transition: {
             type: "spring",
             damping: 25,
-            stiffness: 200
-        }
+            stiffness: 200,
+        },
     },
     exit: {
         opacity: 0,
         scale: 0.9,
-        transition: { duration: 0.2 }
-    }
+        transition: { duration: 0.2 },
+    },
 };
 
 function LoadingSkeleton({ viewMode = "grid" }: { viewMode?: "grid" | "list" }) {
     return (
-        <div className={cn(
-            viewMode === "grid"
-                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6"
-                : "flex flex-col gap-4"
-        )}>
+        <div
+            className={cn(
+                viewMode === "grid"
+                    ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6"
+                    : "flex flex-col gap-4",
+            )}
+        >
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <div key={i} className={cn(
-                    "glass-container animate-pulse",
-                    viewMode === "grid" ? "rounded-3xl p-6 h-64" : "rounded-2xl p-4 h-20"
-                )}>
+                <div
+                    key={i}
+                    className={cn(
+                        "glass-container animate-pulse",
+                        viewMode === "grid" ? "rounded-3xl p-6 h-64" : "rounded-2xl p-4 h-20",
+                    )}
+                >
                     <div className="flex items-center justify-between h-full">
                         <div className="space-y-4 flex-1">
                             <div className="h-4 bg-white/5 rounded-lg w-1/3" />
@@ -118,7 +123,7 @@ export function SessionList({
 
     const toggleSelect = (id: string) => {
         setSelectedIds((prev) =>
-            prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+            prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
         );
     };
 
@@ -164,11 +169,10 @@ export function SessionList({
                 <div className="p-5 rounded-3xl bg-white/5 border border-white/10 mb-6 text-gray-500">
                     <Inbox className="w-12 h-12" />
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-2">
-                    No active sessions
-                </h3>
+                <h3 className="text-2xl font-bold text-white mb-2">No active sessions</h3>
                 <p className="text-gray-500 max-w-md mx-auto">
-                    Start by adding your first session. Authenticated sessions will safely appear here.
+                    Start by adding your first session. Authenticated sessions will safely appear
+                    here.
                 </p>
             </motion.div>
         );
@@ -218,7 +222,7 @@ export function SessionList({
                     "transition-all duration-500",
                     viewMode === "grid"
                         ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 3xl:grid-cols-5 gap-6"
-                        : "flex flex-col gap-4"
+                        : "flex flex-col gap-4",
                 )}
             >
                 {viewMode === "list" && (
@@ -231,12 +235,7 @@ export function SessionList({
                 )}
                 <AnimatePresence mode="popLayout">
                     {sessions.map((session) => (
-                        <motion.div
-                            key={session.id}
-                            layout
-                            variants={itemVariants}
-                            exit="exit"
-                        >
+                        <motion.div key={session.id} layout variants={itemVariants} exit="exit">
                             <SessionCard
                                 session={session}
                                 onLogout={onLogout}

@@ -23,7 +23,7 @@ export function ProxyProviderModal({
     onClose,
     onSave,
     provider,
-    isSaving
+    isSaving,
 }: ProxyProviderModalProps) {
     const [selectedType, setSelectedType] = useState<ProxyProviderType>("OXYLABS");
     const [username, setUsername] = useState("");
@@ -134,7 +134,9 @@ export function ProxyProviderModal({
                                                 selectedType === opt.value
                                                     ? "bg-primary/20 border-primary text-primary shadow-[0_0_15px_rgba(129,140,248,0.2)]"
                                                     : "bg-white/5 border-white/5 text-gray-500 hover:text-white hover:bg-white/10",
-                                                !!provider && selectedType !== opt.value && "opacity-30 grayscale"
+                                                !!provider &&
+                                                    selectedType !== opt.value &&
+                                                    "opacity-30 grayscale",
                                             )}
                                         >
                                             {opt.label}
@@ -177,7 +179,11 @@ export function ProxyProviderModal({
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                             className="w-full bg-white/5 border border-white/5 rounded-2xl py-3.5 pl-11 pr-4 text-sm font-bold text-white placeholder:text-gray-700 focus:outline-none focus:border-primary/50 focus:bg-white/10 transition-all"
-                                            placeholder={provider ? "Leave blank to keep current" : "••••••••"}
+                                            placeholder={
+                                                provider
+                                                    ? "Leave blank to keep current"
+                                                    : "••••••••"
+                                            }
                                         />
                                     </div>
                                 </div>
@@ -229,7 +235,9 @@ export function ProxyProviderModal({
                                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
                                         Routing Priority
                                     </label>
-                                    <span className="text-sm font-black text-primary">{priority}</span>
+                                    <span className="text-sm font-black text-primary">
+                                        {priority}
+                                    </span>
                                 </div>
                                 <input
                                     type="range"

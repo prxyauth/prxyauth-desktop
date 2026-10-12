@@ -8,7 +8,7 @@ import {
     ExternalLink,
     AlertCircle,
     Power,
-    RefreshCw
+    RefreshCw,
 } from "lucide-react";
 import { ProxyProviderConfig, ProxyProviderType } from "@core/types";
 import { cn } from "@core/utils";
@@ -23,7 +23,10 @@ interface ProxyProviderCardProps {
     isRemoving: boolean;
 }
 
-const PROVIDER_INFO: Record<ProxyProviderType, { name: string; description: string; color: string; bg: string }> = {
+const PROVIDER_INFO: Record<
+    ProxyProviderType,
+    { name: string; description: string; color: string; bg: string }
+> = {
     OXYLABS: {
         name: "Oxylabs",
         description: "Premium Residential & Datacenter Proxies",
@@ -41,7 +44,7 @@ const PROVIDER_INFO: Record<ProxyProviderType, { name: string; description: stri
         description: "Specialized High-Performance Proxy Service",
         color: "text-emerald-400",
         bg: "bg-emerald-500/10",
-    }
+    },
 };
 
 export function ProxyProviderCard({
@@ -51,7 +54,7 @@ export function ProxyProviderCard({
     onToggle,
     onTest,
     isTesting,
-    isRemoving
+    isRemoving,
 }: ProxyProviderCardProps) {
     const info = PROVIDER_INFO[provider.provider];
 
@@ -63,64 +66,96 @@ export function ProxyProviderCard({
             className="glass-container glass-card-hover rounded-[32px] p-6 relative overflow-hidden group border border-white/5 hover:border-primary/20 transition-all"
         >
             {/* Background Accent */}
-            <div className={cn("absolute -top-12 -right-12 w-32 h-32 blur-[60px] rounded-full transition-opacity duration-500", info.bg, provider.isEnabled ? "opacity-30" : "opacity-10")} />
+            <div
+                className={cn(
+                    "absolute -top-12 -right-12 w-32 h-32 blur-[60px] rounded-full transition-opacity duration-500",
+                    info.bg,
+                    provider.isEnabled ? "opacity-30" : "opacity-10",
+                )}
+            />
 
             <div className="relative z-10 space-y-6">
                 {/* Header */}
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
-                        <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center border border-white/5 shadow-inner transition-colors", info.bg, info.color)}>
+                        <div
+                            className={cn(
+                                "w-14 h-14 rounded-2xl flex items-center justify-center border border-white/5 shadow-inner transition-colors",
+                                info.bg,
+                                info.color,
+                            )}
+                        >
                             <Layers className="w-7 h-7" />
                         </div>
                         <div>
-                            <h3 className="text-xl font-black text-white tracking-tight">{info.name}</h3>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">{info.description}</p>
+                            <h3 className="text-xl font-black text-white tracking-tight">
+                                {info.name}
+                            </h3>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">
+                                {info.description}
+                            </p>
                         </div>
                     </div>
 
                     <div className="flex flex-col items-end gap-2">
-                        <div className={cn(
-                            "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
-                            provider.isEnabled
-                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                                : "bg-white/5 text-gray-500 border-white/10"
-                        )}>
+                        <div
+                            className={cn(
+                                "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                                provider.isEnabled
+                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                    : "bg-white/5 text-gray-500 border-white/10",
+                            )}
+                        >
                             {provider.isEnabled ? "Activated" : "Deactivated"}
                         </div>
-                        <span className="text-[9px] font-mono text-gray-600">Priority: {provider.priority}</span>
+                        <span className="text-[9px] font-mono text-gray-600">
+                            Priority: {provider.priority}
+                        </span>
                     </div>
                 </div>
 
                 {/* Configuration Stats */}
                 <div className="grid grid-cols-2 gap-3">
                     <div className="bg-white/5 rounded-[20px] p-4 border border-white/5">
-                        <div className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">Configuration</div>
+                        <div className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">
+                            Configuration
+                        </div>
                         <div className="flex items-center gap-2">
                             {provider.hasCredentials ? (
                                 <>
                                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                                    <span className="text-xs font-bold text-white">Credentials Set</span>
+                                    <span className="text-xs font-bold text-white">
+                                        Credentials Set
+                                    </span>
                                 </>
                             ) : (
                                 <>
                                     <AlertCircle className="w-3.5 h-3.5 text-orange-500" />
-                                    <span className="text-xs font-bold text-orange-400">Missing Setup</span>
+                                    <span className="text-xs font-bold text-orange-400">
+                                        Missing Setup
+                                    </span>
                                 </>
                             )}
                         </div>
                     </div>
                     <div className="bg-white/5 rounded-[20px] p-4 border border-white/5">
-                        <div className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">Connection</div>
+                        <div className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">
+                            Connection
+                        </div>
                         <div className="flex items-center gap-2">
                             {provider.isEnabled ? (
                                 <>
                                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-xs font-bold text-emerald-400 uppercase tracking-tighter">Ready to Route</span>
+                                    <span className="text-xs font-bold text-emerald-400 uppercase tracking-tighter">
+                                        Ready to Route
+                                    </span>
                                 </>
                             ) : (
                                 <>
                                     <div className="w-2 h-2 rounded-full bg-gray-600" />
-                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-tighter">Standby</span>
+                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-tighter">
+                                        Standby
+                                    </span>
                                 </>
                             )}
                         </div>
@@ -135,13 +170,19 @@ export function ProxyProviderCard({
                                 <ExternalLink className="w-4 h-4 text-gray-500" />
                             </div>
                             <div>
-                                <p className="text-[8px] font-black uppercase tracking-widest text-gray-600">Active Identity</p>
-                                <p className="text-xs font-mono text-gray-400">{provider.username}</p>
+                                <p className="text-[8px] font-black uppercase tracking-widest text-gray-600">
+                                    Active Identity
+                                </p>
+                                <p className="text-xs font-mono text-gray-400">
+                                    {provider.username}
+                                </p>
                             </div>
                         </div>
                         {provider.zone && (
                             <div className="text-right">
-                                <p className="text-[8px] font-black uppercase tracking-widest text-gray-600">Zone</p>
+                                <p className="text-[8px] font-black uppercase tracking-widest text-gray-600">
+                                    Zone
+                                </p>
                                 <p className="text-xs font-mono text-gray-400">{provider.zone}</p>
                             </div>
                         )}
@@ -156,12 +197,14 @@ export function ProxyProviderCard({
                             "flex flex-col items-center justify-center gap-2 py-3 rounded-2xl border transition-all hover:scale-[1.02] active:scale-[0.98]",
                             provider.isEnabled
                                 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20"
-                                : "bg-white/5 border-white/10 text-gray-500 hover:bg-white/10 hover:text-white"
+                                : "bg-white/5 border-white/10 text-gray-500 hover:bg-white/10 hover:text-white",
                         )}
                         title={provider.isEnabled ? "Disable Provider" : "Enable Provider"}
                     >
                         <Power className="w-4 h-4" />
-                        <span className="text-[8px] font-black uppercase tracking-tighter">Power</span>
+                        <span className="text-[8px] font-black uppercase tracking-tighter">
+                            Power
+                        </span>
                     </button>
 
                     <button
@@ -169,7 +212,9 @@ export function ProxyProviderCard({
                         className="flex flex-col items-center justify-center gap-2 py-3 rounded-2xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
                         <Settings2 className="w-4 h-4" />
-                        <span className="text-[8px] font-black uppercase tracking-tighter">Configure</span>
+                        <span className="text-[8px] font-black uppercase tracking-tighter">
+                            Configure
+                        </span>
                     </button>
 
                     <button
@@ -182,7 +227,9 @@ export function ProxyProviderCard({
                         ) : (
                             <Zap className="w-4 h-4" />
                         )}
-                        <span className="text-[8px] font-black uppercase tracking-tighter">Test Link</span>
+                        <span className="text-[8px] font-black uppercase tracking-tighter">
+                            Test Link
+                        </span>
                     </button>
 
                     <button
@@ -195,7 +242,9 @@ export function ProxyProviderCard({
                         ) : (
                             <Trash2 className="w-4 h-4" />
                         )}
-                        <span className="text-[8px] font-black uppercase tracking-tighter">Purge</span>
+                        <span className="text-[8px] font-black uppercase tracking-tighter">
+                            Purge
+                        </span>
                     </button>
                 </div>
             </div>

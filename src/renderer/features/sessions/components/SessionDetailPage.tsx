@@ -74,7 +74,7 @@ function InfoCard({
     value,
     color = "text-gray-400",
     mono = false,
-    isSensitive = false
+    isSensitive = false,
 }: {
     icon: React.ElementType;
     label: string;
@@ -98,17 +98,19 @@ function InfoCard({
     return (
         <div className="group relative bg-white/[0.03] border border-white/5 rounded-2xl p-4 hover:bg-white/[0.05] hover:border-white/10 transition-all">
             <div className="flex items-start gap-3">
-                <div className={cn("p-2 rounded-xl bg-white/5", color.replace("text-", "text-opacity-80"))}>
+                <div
+                    className={cn(
+                        "p-2 rounded-xl bg-white/5",
+                        color.replace("text-", "text-opacity-80"),
+                    )}
+                >
                     <Icon className={cn("w-4 h-4", color)} />
                 </div>
                 <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-500 mb-1">
                         {label}
                     </p>
-                    <p className={cn(
-                        "text-sm text-white truncate",
-                        mono && "font-mono text-xs"
-                    )}>
+                    <p className={cn("text-sm text-white truncate", mono && "font-mono text-xs")}>
                         {displayValue ?? "—"}
                     </p>
                 </div>
@@ -188,7 +190,7 @@ function Section({
     title,
     icon: Icon,
     children,
-    color = "text-primary"
+    color = "text-primary",
 }: {
     title: string;
     icon: React.ElementType;
@@ -202,12 +204,15 @@ function Section({
             className="glass-container rounded-[28px] p-6 sm:p-8"
         >
             <div className="flex items-center gap-3 mb-6">
-                <div className={cn("p-2.5 rounded-xl bg-white/5", color.replace("text-", "bg-opacity-10"))}>
+                <div
+                    className={cn(
+                        "p-2.5 rounded-xl bg-white/5",
+                        color.replace("text-", "bg-opacity-10"),
+                    )}
+                >
                     <Icon className={cn("w-5 h-5", color)} />
                 </div>
-                <h2 className="text-lg font-black uppercase tracking-wide text-white">
-                    {title}
-                </h2>
+                <h2 className="text-lg font-black uppercase tracking-wide text-white">{title}</h2>
             </div>
             {children}
         </motion.section>
@@ -237,7 +242,15 @@ function Spinner() {
 }
 
 export function SessionDetailPage({ sessionId, onBack }: SessionDetailPageProps) {
-    const { sessions, logout, verify, verifyingId, launchSessionBrowser, closeSessionBrowser, browserStatuses } = useSessions();
+    const {
+        sessions,
+        logout,
+        verify,
+        verifyingId,
+        launchSessionBrowser,
+        closeSessionBrowser,
+        browserStatuses,
+    } = useSessions();
     const [session, setSession] = useState<Session | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -246,11 +259,11 @@ export function SessionDetailPage({ sessionId, onBack }: SessionDetailPageProps)
     const [isLaunching, setIsLaunching] = useState(false);
 
     const browserStatus = session ? browserStatuses[session.id] : undefined;
-    const isBrowserOpen = browserStatus === 'open' || browserStatus === 'launching';
+    const isBrowserOpen = browserStatus === "open" || browserStatus === "launching";
 
     // Find session from context
     useEffect(() => {
-        const found = sessions.find(s => s.id === sessionId);
+        const found = sessions.find((s) => s.id === sessionId);
         if (found) {
             setSession(found);
             setIsLoading(false);
@@ -354,7 +367,10 @@ export function SessionDetailPage({ sessionId, onBack }: SessionDetailPageProps)
         <div className="space-y-8">
             {/* Breadcrumbs */}
             <nav className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
-                <button onClick={onBack} className="hover:text-primary transition-colors flex items-center gap-2">
+                <button
+                    onClick={onBack}
+                    className="hover:text-primary transition-colors flex items-center gap-2"
+                >
                     <ArrowLeft className="w-3.5 h-3.5" />
                     Dashboard
                 </button>
@@ -369,24 +385,39 @@ export function SessionDetailPage({ sessionId, onBack }: SessionDetailPageProps)
                         {session.email}
                     </h1>
                     <p className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-500 mt-1">
-                        {session.provider?.toUpperCase() || "SESSION"} • {formatRelativeTime(session.expiresAt)}
+                        {session.provider?.toUpperCase() || "SESSION"} •{" "}
+                        {formatRelativeTime(session.expiresAt)}
                     </p>
                 </div>
                 <StatusBadge status={session.status} />
                 {browserStatus && (
-                    <div className={cn(
-                        "flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest",
-                        browserStatus === 'open' && "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400",
-                        browserStatus === 'launching' && "bg-amber-500/10 border border-amber-500/20 text-amber-400",
-                        browserStatus === 'closed' && "bg-gray-500/10 border border-gray-500/20 text-gray-400",
-                    )}>
-                        <div className={cn(
-                            "w-2 h-2 rounded-full",
-                            browserStatus === 'open' && "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.5)]",
-                            browserStatus === 'launching' && "bg-amber-400 animate-pulse shadow-[0_0_8px_rgba(251,191,36,0.5)]",
-                            browserStatus === 'closed' && "bg-gray-400",
-                        )} />
-                        Browser {browserStatus === 'open' ? 'Active' : browserStatus === 'launching' ? 'Launching' : 'Closed'}
+                    <div
+                        className={cn(
+                            "flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest",
+                            browserStatus === "open" &&
+                                "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400",
+                            browserStatus === "launching" &&
+                                "bg-amber-500/10 border border-amber-500/20 text-amber-400",
+                            browserStatus === "closed" &&
+                                "bg-gray-500/10 border border-gray-500/20 text-gray-400",
+                        )}
+                    >
+                        <div
+                            className={cn(
+                                "w-2 h-2 rounded-full",
+                                browserStatus === "open" &&
+                                    "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.5)]",
+                                browserStatus === "launching" &&
+                                    "bg-amber-400 animate-pulse shadow-[0_0_8px_rgba(251,191,36,0.5)]",
+                                browserStatus === "closed" && "bg-gray-400",
+                            )}
+                        />
+                        Browser{" "}
+                        {browserStatus === "open"
+                            ? "Active"
+                            : browserStatus === "launching"
+                              ? "Launching"
+                              : "Closed"}
                     </div>
                 )}
             </div>
@@ -422,8 +453,12 @@ export function SessionDetailPage({ sessionId, onBack }: SessionDetailPageProps)
                             className="relative group py-4 px-4 rounded-2xl transition-all disabled:opacity-50 bg-orange-500/10 border border-orange-500/20 hover:border-orange-500/40"
                         >
                             <span className="flex items-center justify-center gap-2 text-orange-400 font-bold text-sm">
-                                {browserStatus === 'launching' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
-                                {browserStatus === 'launching' ? 'Launching...' : 'Close Browser'}
+                                {browserStatus === "launching" ? (
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <X className="w-4 h-4" />
+                                )}
+                                {browserStatus === "launching" ? "Launching..." : "Close Browser"}
                             </span>
                         </button>
                     ) : (
@@ -458,7 +493,11 @@ export function SessionDetailPage({ sessionId, onBack }: SessionDetailPageProps)
                             icon={Server}
                             label="Provider"
                             value={session.provider?.toUpperCase()}
-                            color={session.provider ? providerColors[session.provider] : "text-gray-400"}
+                            color={
+                                session.provider
+                                    ? providerColors[session.provider]
+                                    : "text-gray-400"
+                            }
                         />
                         <InfoCard icon={Globe} label="Email" value={session.email} />
                         {session.password && (
@@ -470,12 +509,26 @@ export function SessionDetailPage({ sessionId, onBack }: SessionDetailPageProps)
                             />
                         )}
                         <InfoCard icon={Shield} label="Session ID" value={session.id} mono />
-                        <InfoCard icon={Clock} label="Created" value={formatDate(session.createdAt)} />
+                        <InfoCard
+                            icon={Clock}
+                            label="Created"
+                            value={formatDate(session.createdAt)}
+                        />
                         {session.ipAddress && (
-                            <InfoCard icon={Server} label="IP Address" value={session.ipAddress} mono />
+                            <InfoCard
+                                icon={Server}
+                                label="IP Address"
+                                value={session.ipAddress}
+                                mono
+                            />
                         )}
                         {session.lastUrl && (
-                            <InfoCard icon={ExternalLink} label="Last URL" value={session.lastUrl} mono />
+                            <InfoCard
+                                icon={ExternalLink}
+                                label="Last URL"
+                                value={session.lastUrl}
+                                mono
+                            />
                         )}
                     </div>
                 </Section>
@@ -484,25 +537,50 @@ export function SessionDetailPage({ sessionId, onBack }: SessionDetailPageProps)
                 {session.proxy && (
                     <Section title="Proxy Configuration" icon={Server} color="text-orange-400">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            <InfoCard icon={Server} label="Server" value={session.proxy.server} mono />
+                            <InfoCard
+                                icon={Server}
+                                label="Server"
+                                value={session.proxy.server}
+                                mono
+                            />
                             {session.proxy.externalIp && (
-                                <InfoCard icon={Globe} label="External IP" value={session.proxy.externalIp} mono />
+                                <InfoCard
+                                    icon={Globe}
+                                    label="External IP"
+                                    value={session.proxy.externalIp}
+                                    mono
+                                />
                             )}
                             {session.proxy.country && (
-                                <InfoCard icon={Globe} label="Country" value={session.proxy.country} />
+                                <InfoCard
+                                    icon={Globe}
+                                    label="Country"
+                                    value={session.proxy.country}
+                                />
                             )}
                             {(session.proxy.city || session.proxy.region) && (
                                 <InfoCard
                                     icon={Globe}
                                     label="Location"
-                                    value={[session.proxy.city, session.proxy.region].filter(Boolean).join(", ")}
+                                    value={[session.proxy.city, session.proxy.region]
+                                        .filter(Boolean)
+                                        .join(", ")}
                                 />
                             )}
                             {session.proxy.timezone && (
-                                <InfoCard icon={Clock} label="Proxy Timezone" value={session.proxy.timezone} />
+                                <InfoCard
+                                    icon={Clock}
+                                    label="Proxy Timezone"
+                                    value={session.proxy.timezone}
+                                />
                             )}
                             {session.proxy.username && (
-                                <InfoCard icon={Shield} label="Username" value={session.proxy.username} mono />
+                                <InfoCard
+                                    icon={Shield}
+                                    label="Username"
+                                    value={session.proxy.username}
+                                    mono
+                                />
                             )}
                             {session.proxy.password && (
                                 <InfoCard
@@ -525,33 +603,46 @@ export function SessionDetailPage({ sessionId, onBack }: SessionDetailPageProps)
                                 <UserAgentBlock value={fp.userAgent} />
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                                    <InfoCard icon={Monitor} label="Platform" value={fp.userAgentMetadata?.platform} />
+                                    <InfoCard
+                                        icon={Monitor}
+                                        label="Platform"
+                                        value={fp.userAgentMetadata?.platform}
+                                    />
                                     <InfoCard
                                         icon={Shield}
                                         label="Platform Version"
                                         value={fp.userAgentMetadata?.platformVersion}
                                     />
-                                    <InfoCard icon={Cpu} label="Architecture" value={fp.userAgentMetadata?.architecture} />
-                                    <InfoCard icon={Shield} label="Bitness" value={fp.userAgentMetadata?.bitness} />
+                                    <InfoCard
+                                        icon={Cpu}
+                                        label="Architecture"
+                                        value={fp.userAgentMetadata?.architecture}
+                                    />
+                                    <InfoCard
+                                        icon={Shield}
+                                        label="Bitness"
+                                        value={fp.userAgentMetadata?.bitness}
+                                    />
                                 </div>
 
-                                {fp.userAgentMetadata?.brands && fp.userAgentMetadata.brands.length > 0 && (
-                                    <div className="p-4 bg-black/30 rounded-xl border border-white/5">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-500 mb-3">
-                                            Browser Brands
-                                        </p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {fp.userAgentMetadata.brands.map((brand, i) => (
-                                                <span
-                                                    key={i}
-                                                    className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs font-mono text-gray-300"
-                                                >
-                                                    {brand.brand} v{brand.version}
-                                                </span>
-                                            ))}
+                                {fp.userAgentMetadata?.brands &&
+                                    fp.userAgentMetadata.brands.length > 0 && (
+                                        <div className="p-4 bg-black/30 rounded-xl border border-white/5">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-500 mb-3">
+                                                Browser Brands
+                                            </p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {fp.userAgentMetadata.brands.map((brand, i) => (
+                                                    <span
+                                                        key={i}
+                                                        className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs font-mono text-gray-300"
+                                                    >
+                                                        {brand.brand} v{brand.version}
+                                                    </span>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
                             </div>
                         </Section>
 
@@ -561,17 +652,49 @@ export function SessionDetailPage({ sessionId, onBack }: SessionDetailPageProps)
                                 <InfoCard
                                     icon={Maximize2}
                                     label="Screen Resolution"
-                                    value={fp.screen ? `${fp.screen.width} × ${fp.screen.height}` : undefined}
+                                    value={
+                                        fp.screen
+                                            ? `${fp.screen.width} × ${fp.screen.height}`
+                                            : undefined
+                                    }
                                 />
                                 <InfoCard
                                     icon={Maximize2}
                                     label="Viewport"
-                                    value={fp.viewport ? `${fp.viewport.width} × ${fp.viewport.height}` : undefined}
+                                    value={
+                                        fp.viewport
+                                            ? `${fp.viewport.width} × ${fp.viewport.height}`
+                                            : undefined
+                                    }
                                 />
-                                <InfoCard icon={Palette} label="Color Depth" value={fp.screen?.colorDepth ? `${fp.screen.colorDepth}-bit` : undefined} />
-                                <InfoCard icon={Monitor} label="Device Pixel Ratio" value={fp.deviceScaleFactor ? `${fp.deviceScaleFactor}×` : undefined} />
-                                <InfoCard icon={Cpu} label="CPU Cores" value={fp.hardwareConcurrency} />
-                                <InfoCard icon={Cpu} label="Device Memory" value={fp.deviceMemory ? `${fp.deviceMemory} GB` : undefined} />
+                                <InfoCard
+                                    icon={Palette}
+                                    label="Color Depth"
+                                    value={
+                                        fp.screen?.colorDepth
+                                            ? `${fp.screen.colorDepth}-bit`
+                                            : undefined
+                                    }
+                                />
+                                <InfoCard
+                                    icon={Monitor}
+                                    label="Device Pixel Ratio"
+                                    value={
+                                        fp.deviceScaleFactor
+                                            ? `${fp.deviceScaleFactor}×`
+                                            : undefined
+                                    }
+                                />
+                                <InfoCard
+                                    icon={Cpu}
+                                    label="CPU Cores"
+                                    value={fp.hardwareConcurrency}
+                                />
+                                <InfoCard
+                                    icon={Cpu}
+                                    label="Device Memory"
+                                    value={fp.deviceMemory ? `${fp.deviceMemory} GB` : undefined}
+                                />
                                 <InfoCard
                                     icon={Smartphone}
                                     label="Mobile Device"
@@ -590,8 +713,18 @@ export function SessionDetailPage({ sessionId, onBack }: SessionDetailPageProps)
                         {/* Graphics & Locale */}
                         <Section title="Graphics & Locale" icon={Palette} color="text-pink-400">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <InfoCard icon={Palette} label="WebGL Vendor" value={fp.webgl?.vendor} mono />
-                                <InfoCard icon={Palette} label="WebGL Renderer" value={fp.webgl?.renderer} mono />
+                                <InfoCard
+                                    icon={Palette}
+                                    label="WebGL Vendor"
+                                    value={fp.webgl?.vendor}
+                                    mono
+                                />
+                                <InfoCard
+                                    icon={Palette}
+                                    label="WebGL Renderer"
+                                    value={fp.webgl?.renderer}
+                                    mono
+                                />
                                 <InfoCard icon={Globe} label="Language" value={fp.language} />
                                 <InfoCard icon={Clock} label="Timezone" value={fp.timezoneId} />
                             </div>

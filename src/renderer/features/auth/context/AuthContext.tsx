@@ -2,14 +2,7 @@
  * Auth Context - Manages user authentication state
  */
 
-import {
-    createContext,
-    useContext,
-    useState,
-    useEffect,
-    useCallback,
-    ReactNode,
-} from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { authApi, ApiError } from "@core/api/client";
 import { AuthUser, LoginRequest, RegisterRequest } from "@core/types";
 
@@ -80,9 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             return { success: false, error: response.message || "Login failed" };
         } catch (error) {
-            const message = error instanceof ApiError
-                ? error.message
-                : "An unexpected error occurred";
+            const message =
+                error instanceof ApiError ? error.message : "An unexpected error occurred";
             return { success: false, error: message };
         }
     }, []);
@@ -104,9 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             return { success: false, error: response.message || "Registration failed" };
         } catch (error) {
-            const message = error instanceof ApiError
-                ? error.message
-                : "An unexpected error occurred";
+            const message =
+                error instanceof ApiError ? error.message : "An unexpected error occurred";
             return { success: false, error: message };
         }
     }, []);

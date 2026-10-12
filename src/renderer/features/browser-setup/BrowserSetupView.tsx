@@ -1,90 +1,77 @@
 interface BrowserSetupViewProps {
-  progress: number;
-  message?: string;
-  error: string | null;
-  onRetry?: () => void;
+    progress: number;
+    message?: string;
+    error: string | null;
+    onRetry?: () => void;
 }
 
-export function BrowserSetupView({
-  progress,
-  message,
-  error,
-  onRetry,
-}: BrowserSetupViewProps) {
-  return (
-    <div className="setup-container">
-      <div className="setup-card">
-        <div className="logo-container">
-          <div className="logo-circle">
-            <span className="logo-text">P</span>
-          </div>
-        </div>
+export function BrowserSetupView({ progress, message, error, onRetry }: BrowserSetupViewProps) {
+    return (
+        <div className="setup-container">
+            <div className="setup-card">
+                <div className="logo-container">
+                    <div className="logo-circle">
+                        <span className="logo-text">P</span>
+                    </div>
+                </div>
 
-        <h1 className="setup-title">
-          {error ? "Setup Failed" : "Initializing PRXY Auth"}
-        </h1>
-        <p className="setup-description">
-          {error
-            ? "We encountered an issue while setting up the browser components."
-            : message ||
-              "Setting up secure browser components for your sessions."}
-        </p>
+                <h1 className="setup-title">{error ? "Setup Failed" : "Initializing PRXY Auth"}</h1>
+                <p className="setup-description">
+                    {error
+                        ? "We encountered an issue while setting up the browser components."
+                        : message || "Setting up secure browser components for your sessions."}
+                </p>
 
-        {!error && (
-          <div className="progress-wrapper">
-            <div className="progress-bar-container">
-              <div
-                className="progress-bar-fill"
-                style={{ width: `${progress}%` }}
-              />
+                {!error && (
+                    <div className="progress-wrapper">
+                        <div className="progress-bar-container">
+                            <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
+                        </div>
+                        <div className="progress-stats">
+                            <span className="progress-percentage">{progress}%</span>
+                            <span className="progress-status">
+                                {progress === 100 ? "Finalizing..." : "Downloading..."}
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+                {error && (
+                    <div className="error-container">
+                        <div className="error-message">
+                            <svg
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="error-icon"
+                            >
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="8" x2="12" y2="12" />
+                                <line x1="12" y1="16" x2="12.01" y2="16" />
+                            </svg>
+                            {error}
+                        </div>
+                        {onRetry && (
+                            <button className="retry-button" onClick={onRetry}>
+                                Retry Installation
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                <div className="setup-footer">
+                    <p>Initial setup may take a few minutes depending on your connection.</p>
+                </div>
             </div>
-            <div className="progress-stats">
-              <span className="progress-percentage">{progress}%</span>
-              <span className="progress-status">
-                {progress === 100 ? "Finalizing..." : "Downloading..."}
-              </span>
-            </div>
-          </div>
-        )}
 
-        {error && (
-          <div className="error-container">
-            <div className="error-message">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="error-icon"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              {error}
-            </div>
-            {onRetry && (
-              <button className="retry-button" onClick={onRetry}>
-                Retry Installation
-              </button>
-            )}
-          </div>
-        )}
-
-        <div className="setup-footer">
-          <p>
-            Initial setup may take a few minutes depending on your connection.
-          </p>
-        </div>
-      </div>
-
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
+            <style
+                dangerouslySetInnerHTML={{
+                    __html: `
         .setup-container {
           height: 100vh;
           width: 100vw;
@@ -205,8 +192,8 @@ export function BrowserSetupView({
           font-size: 12px;
         }
       `,
-        }}
-      />
-    </div>
-  );
+                }}
+            />
+        </div>
+    );
 }

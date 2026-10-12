@@ -8,7 +8,9 @@ interface AddProxyModalProps {
     isOpen: boolean;
     onClose: () => void;
     onAdd: (proxy: ProxyConfig, validate: boolean) => Promise<boolean>;
-    onValidate: (proxy: ProxyConfig) => Promise<{ success: boolean; ip?: string; latency?: number; message?: string }>;
+    onValidate: (
+        proxy: ProxyConfig,
+    ) => Promise<{ success: boolean; ip?: string; latency?: number; message?: string }>;
     isAdding: boolean;
     isValidating: boolean;
 }
@@ -26,7 +28,12 @@ export function AddProxyModal({
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [shouldValidate, setShouldValidate] = useState(true);
-    const [validationResult, setValidationResult] = useState<{ success: boolean; ip?: string; latency?: number; message?: string } | null>(null);
+    const [validationResult, setValidationResult] = useState<{
+        success: boolean;
+        ip?: string;
+        latency?: number;
+        message?: string;
+    } | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -94,7 +101,9 @@ export function AddProxyModal({
                             </div>
                             <div>
                                 <h2 className="text-xl font-bold text-white">Add New Proxy</h2>
-                                <p className="text-xs text-gray-500 uppercase tracking-widest font-black mt-1">Pool Management</p>
+                                <p className="text-xs text-gray-500 uppercase tracking-widest font-black mt-1">
+                                    Pool Management
+                                </p>
                             </div>
                         </div>
                         <button
@@ -108,7 +117,9 @@ export function AddProxyModal({
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Protocol Selection */}
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Protocol</label>
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">
+                                Protocol
+                            </label>
                             <div className="flex gap-2 p-1 bg-white/5 rounded-2xl border border-white/10">
                                 <button
                                     type="button"
@@ -117,7 +128,7 @@ export function AddProxyModal({
                                         "flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
                                         protocol === "http"
                                             ? "bg-primary text-white shadow-lg"
-                                            : "text-gray-500 hover:text-white"
+                                            : "text-gray-500 hover:text-white",
                                     )}
                                 >
                                     HTTP / HTTPS
@@ -129,7 +140,7 @@ export function AddProxyModal({
                                         "flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
                                         protocol === "socks5"
                                             ? "bg-primary text-white shadow-lg"
-                                            : "text-gray-500 hover:text-white"
+                                            : "text-gray-500 hover:text-white",
                                     )}
                                 >
                                     SOCKS5
@@ -139,7 +150,9 @@ export function AddProxyModal({
 
                         {/* Server Input */}
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Proxy Server</label>
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">
+                                Proxy Server
+                            </label>
                             <div className="relative">
                                 <Server className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                                 <input
@@ -156,7 +169,9 @@ export function AddProxyModal({
                         {/* Credentials Row */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Username (Optional)</label>
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">
+                                    Username (Optional)
+                                </label>
                                 <div className="relative">
                                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                                     <input
@@ -169,7 +184,9 @@ export function AddProxyModal({
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Password (Optional)</label>
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">
+                                    Password (Optional)
+                                </label>
                                 <div className="relative">
                                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                                     <input
@@ -193,7 +210,12 @@ export function AddProxyModal({
                                     onChange={(e) => setShouldValidate(e.target.checked)}
                                     className="w-4 h-4 rounded border-white/10 bg-white/5 text-primary focus:ring-primary"
                                 />
-                                <label htmlFor="validate-check" className="text-xs font-bold text-gray-400">Validate before adding</label>
+                                <label
+                                    htmlFor="validate-check"
+                                    className="text-xs font-bold text-gray-400"
+                                >
+                                    Validate before adding
+                                </label>
                             </div>
                             <button
                                 type="button"
@@ -203,7 +225,9 @@ export function AddProxyModal({
                             >
                                 {isValidating ? (
                                     <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                ) : <Zap className="w-3 h-3" />}
+                                ) : (
+                                    <Zap className="w-3 h-3" />
+                                )}
                                 Check Proxy
                             </button>
                         </div>
@@ -217,15 +241,21 @@ export function AddProxyModal({
                                     "p-4 rounded-[20px] border flex items-start gap-3",
                                     validationResult.success
                                         ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                                        : "bg-red-500/10 border-red-500/20 text-red-400"
+                                        : "bg-red-500/10 border-red-500/20 text-red-400",
                                 )}
                             >
-                                {validationResult.success ? <Check className="w-5 h-5 mt-0.5 shrink-0" /> : <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />}
+                                {validationResult.success ? (
+                                    <Check className="w-5 h-5 mt-0.5 shrink-0" />
+                                ) : (
+                                    <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
+                                )}
                                 <div className="text-xs space-y-1">
                                     <p className="font-bold">{validationResult.message}</p>
                                     {validationResult.success && (
                                         <p className="opacity-70">
-                                            External IP: <span className="font-mono">{validationResult.ip}</span> • Latency: {validationResult.latency}ms
+                                            External IP:{" "}
+                                            <span className="font-mono">{validationResult.ip}</span>{" "}
+                                            • Latency: {validationResult.latency}ms
                                         </p>
                                     )}
                                 </div>
@@ -252,9 +282,7 @@ export function AddProxyModal({
                                         Adding to Pool...
                                     </>
                                 ) : (
-                                    <>
-                                        Add to Rotation Pool
-                                    </>
+                                    <>Add to Rotation Pool</>
                                 )}
                             </button>
                         </div>

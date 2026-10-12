@@ -17,7 +17,8 @@ export function useNotificationSettings() {
             const data = await notificationApi.getSettings();
             setSettings(data);
         } catch (err) {
-            const message = err instanceof ApiError ? err.message : "Failed to fetch notification settings";
+            const message =
+                err instanceof ApiError ? err.message : "Failed to fetch notification settings";
             setError(message);
         } finally {
             setIsLoading(false);
@@ -56,7 +57,8 @@ export function useNotificationSettings() {
             setTestMessage(result.message);
             return true;
         } catch (err) {
-            const message = err instanceof ApiError ? err.message : "Failed to send test notification";
+            const message =
+                err instanceof ApiError ? err.message : "Failed to send test notification";
             setError(message);
             return false;
         } finally {
@@ -73,6 +75,6 @@ export function useNotificationSettings() {
         testMessage,
         save,
         test,
-        refresh: fetchSettings
+        refresh: fetchSettings,
     };
 }

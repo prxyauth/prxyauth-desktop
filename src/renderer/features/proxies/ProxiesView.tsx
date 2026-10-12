@@ -30,8 +30,12 @@ export function ProxiesView() {
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-black text-white tracking-tighter uppercase">Proxy Management</h1>
-                    <p className="text-gray-500 uppercase tracking-[0.2em] font-black text-[10px] mt-1">Rotation Pool & Health Monitoring</p>
+                    <h1 className="text-3xl font-black text-white tracking-tighter uppercase">
+                        Proxy Management
+                    </h1>
+                    <p className="text-gray-500 uppercase tracking-[0.2em] font-black text-[10px] mt-1">
+                        Rotation Pool & Health Monitoring
+                    </p>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -40,7 +44,9 @@ export function ProxiesView() {
                         className="flex items-center gap-2.5 h-12 px-6 rounded-2xl bg-primary hover:bg-primary/90 text-white transition-all shadow-lg"
                     >
                         <Plus className="w-5 h-5" />
-                        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Add Proxy</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+                            Add Proxy
+                        </span>
                     </button>
                 </div>
             </div>
@@ -65,7 +71,9 @@ export function ProxiesView() {
                         <Server className="w-7 h-7 text-blue-400" />
                     </div>
                     <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Total Pooled</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">
+                            Total Pooled
+                        </div>
                         <div className="text-3xl font-bold text-white">{stats?.total || 0}</div>
                     </div>
                 </motion.div>
@@ -80,8 +88,12 @@ export function ProxiesView() {
                         <ShieldCheck className="w-7 h-7 text-emerald-400" />
                     </div>
                     <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Healthy</div>
-                        <div className="text-3xl font-bold text-emerald-400">{stats?.healthy || 0}</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">
+                            Healthy
+                        </div>
+                        <div className="text-3xl font-bold text-emerald-400">
+                            {stats?.healthy || 0}
+                        </div>
                     </div>
                 </motion.div>
 
@@ -95,8 +107,12 @@ export function ProxiesView() {
                         <Activity className="w-7 h-7 text-red-400" />
                     </div>
                     <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Unhealthy</div>
-                        <div className="text-3xl font-bold text-red-500">{stats?.unhealthy || 0}</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">
+                            Unhealthy
+                        </div>
+                        <div className="text-3xl font-bold text-red-500">
+                            {stats?.unhealthy || 0}
+                        </div>
                     </div>
                 </motion.div>
             </div>
@@ -105,11 +121,7 @@ export function ProxiesView() {
             {isLoading && !proxies.length ? (
                 <ProxyListSkeleton />
             ) : (
-                <ProxyList
-                    proxies={proxies}
-                    onRemove={remove}
-                    isRemoving={isRemoving}
-                />
+                <ProxyList proxies={proxies} onRemove={remove} isRemoving={isRemoving} />
             )}
 
             {/* Add Proxy Modal */}

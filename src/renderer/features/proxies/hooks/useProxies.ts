@@ -14,7 +14,9 @@ interface UseProxiesReturn {
     refresh: () => Promise<void>;
     add: (proxy: ProxyConfig, validate?: boolean) => Promise<boolean>;
     remove: (server: string) => Promise<boolean>;
-    validate: (proxy: ProxyConfig) => Promise<{ success: boolean; ip?: string; latency?: number; message?: string }>;
+    validate: (
+        proxy: ProxyConfig,
+    ) => Promise<{ success: boolean; ip?: string; latency?: number; message?: string }>;
     isAdding: boolean;
     isRemoving: string | null;
     isValidating: boolean;
@@ -49,43 +51,49 @@ export function useProxies(): UseProxiesReturn {
         }
     }, [refresh]);
 
-    const add = useCallback(async (proxy: ProxyConfig, validate: boolean = true): Promise<boolean> => {
-        setIsAdding(true);
-        setError(null);
-        try {
-            const response = await proxyApi.add({ ...proxy, validate });
-            if (response.success) {
-                await refresh();
-                return true;
+    const add = useCallback(
+        async (proxy: ProxyConfig, validate: boolean = true): Promise<boolean> => {
+            setIsAdding(true);
+            setError(null);
+            try {
+                const response = await proxyApi.add({ ...proxy, validate });
+                if (response.success) {
+                    await refresh();
+                    return true;
+                }
+                throw new Error(response.error || "Failed to add proxy");
+            } catch (err) {
+                const message = err instanceof ApiError ? err.message : "Failed to add proxy";
+                setError(message);
+                return false;
+            } finally {
+                setIsAdding(false);
             }
-            throw new Error(response.error || "Failed to add proxy");
-        } catch (err) {
-            const message = err instanceof ApiError ? err.message : "Failed to add proxy";
-            setError(message);
-            return false;
-        } finally {
-            setIsAdding(false);
-        }
-    }, [refresh]);
+        },
+        [refresh],
+    );
 
-    const remove = useCallback(async (server: string): Promise<boolean> => {
-        setIsRemoving(server);
-        setError(null);
-        try {
-            const response = await proxyApi.remove(server);
-            if (response.success) {
-                await refresh();
-                return true;
+    const remove = useCallback(
+        async (server: string): Promise<boolean> => {
+            setIsRemoving(server);
+            setError(null);
+            try {
+                const response = await proxyApi.remove(server);
+                if (response.success) {
+                    await refresh();
+                    return true;
+                }
+                throw new Error(response.error || "Failed to remove proxy");
+            } catch (err) {
+                const message = err instanceof ApiError ? err.message : "Failed to remove proxy";
+                setError(message);
+                return false;
+            } finally {
+                setIsRemoving(null);
             }
-            throw new Error(response.error || "Failed to remove proxy");
-        } catch (err) {
-            const message = err instanceof ApiError ? err.message : "Failed to remove proxy";
-            setError(message);
-            return false;
-        } finally {
-            setIsRemoving(null);
-        }
-    }, [refresh]);
+        },
+        [refresh],
+    );
 
     const validate = useCallback(async (proxy: ProxyConfig) => {
         setIsValidating(true);
@@ -96,17 +104,17 @@ export function useProxies(): UseProxiesReturn {
                     success: true,
                     ip: response.data.ip,
                     latency: response.data.latency,
-                    message: response.data.message
+                    message: response.data.message,
                 };
             }
             return {
                 success: false,
-                message: response.error || "Validation failed"
+                message: response.error || "Validation failed",
             };
         } catch (err) {
             return {
                 success: false,
-                message: err instanceof ApiError ? err.message : "Validation failed"
+                message: err instanceof ApiError ? err.message : "Validation failed",
             };
         } finally {
             setIsValidating(false);

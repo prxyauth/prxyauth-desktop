@@ -39,16 +39,20 @@ export function ProxyCard({ proxy, onRemove, isRemoving }: ProxyCardProps) {
             {/* Header */}
             <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                    <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center border transition-all",
-                        proxy.isHealthy
-                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                            : "bg-red-500/10 text-red-500 border-red-500/20"
-                    )}>
+                    <div
+                        className={cn(
+                            "w-10 h-10 rounded-xl flex items-center justify-center border transition-all",
+                            proxy.isHealthy
+                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                : "bg-red-500/10 text-red-500 border-red-500/20",
+                        )}
+                    >
                         <Server className="w-5 h-5" />
                     </div>
                     <div>
-                        <h3 className="font-bold text-white text-sm truncate max-w-[180px]">{proxy.server}</h3>
+                        <h3 className="font-bold text-white text-sm truncate max-w-[180px]">
+                            {proxy.server}
+                        </h3>
                         <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-gray-500">
                             <Globe className="w-3 h-3" />
                             <span>IP: {proxy.ip}</span>
@@ -62,7 +66,7 @@ export function ProxyCard({ proxy, onRemove, isRemoving }: ProxyCardProps) {
                         "px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider",
                         proxy.isHealthy
                             ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                            : "bg-red-500/10 text-red-400 border border-red-500/20"
+                            : "bg-red-500/10 text-red-400 border border-red-500/20",
                     )}
                 >
                     {proxy.isHealthy ? "Healthy" : "Dead"}
@@ -85,10 +89,12 @@ export function ProxyCard({ proxy, onRemove, isRemoving }: ProxyCardProps) {
                         <Activity className="w-3 h-3 text-primary" />
                         Status
                     </div>
-                    <div className={cn(
-                        "text-sm font-bold",
-                        proxy.isHealthy ? "text-emerald-400" : "text-red-400"
-                    )}>
+                    <div
+                        className={cn(
+                            "text-sm font-bold",
+                            proxy.isHealthy ? "text-emerald-400" : "text-red-400",
+                        )}
+                    >
                         {proxy.isHealthy ? "Active" : "Down"}
                     </div>
                 </div>
@@ -103,7 +109,7 @@ export function ProxyCard({ proxy, onRemove, isRemoving }: ProxyCardProps) {
                     confirmRemove
                         ? "bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30"
                         : "bg-white/5 text-gray-400 border border-white/5 hover:bg-white/10 hover:text-white",
-                    isRemoving && "opacity-50 cursor-not-allowed"
+                    isRemoving && "opacity-50 cursor-not-allowed",
                 )}
             >
                 {isRemoving ? (

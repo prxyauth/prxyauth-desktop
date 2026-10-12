@@ -4,14 +4,7 @@
 
 import { useState, FormEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-    Mail,
-    Lock,
-    AlertCircle,
-    Loader2,
-    ChevronRight,
-    ShieldCheck,
-} from "lucide-react";
+import { Mail, Lock, AlertCircle, Loader2, ChevronRight, ShieldCheck } from "lucide-react";
 import { LoginResponse, SessionStatus } from "@core/types";
 import { useAuth } from "../hooks/useAuth";
 
@@ -45,7 +38,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
                     success: true,
                     sessionId: "app-session",
                     status: SessionStatus.AUTHENTICATED,
-                    message: "Login successful"
+                    message: "Login successful",
                 });
             } else {
                 setError(result.error || "Invalid credentials");
@@ -84,9 +77,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
                         <div className="inline-flex p-3 rounded-2xl border bg-primary/10 border-primary/20 mb-4">
                             <Lock className="w-6 h-6 text-primary" />
                         </div>
-                        <h2 className="text-2xl font-bold text-white mb-2">
-                            Sign in
-                        </h2>
+                        <h2 className="text-2xl font-bold text-white mb-2">Sign in</h2>
                         <p className="text-gray-400 text-sm">
                             Enter your credentials to manage sessions
                         </p>

@@ -15,7 +15,7 @@ import {
     Server,
     Shield,
     Terminal,
-    X
+    X,
 } from "lucide-react";
 import { Session } from "@core/types";
 import { cn } from "@core/utils";
@@ -32,35 +32,59 @@ export function SessionDetailModal({ isOpen, onClose, session }: SessionDetailMo
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleString("en-US", {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
         });
     };
 
-    const InfoSection = ({ title, icon: Icon, children, className }: { title: string, icon: any, children: React.ReactNode, className?: string }) => (
-        <div className={cn("space-y-4 p-6 rounded-3xl bg-white/5 border border-white/5", className)}>
+    const InfoSection = ({
+        title,
+        icon: Icon,
+        children,
+        className,
+    }: {
+        title: string;
+        icon: any;
+        children: React.ReactNode;
+        className?: string;
+    }) => (
+        <div
+            className={cn("space-y-4 p-6 rounded-3xl bg-white/5 border border-white/5", className)}
+        >
             <div className="flex items-center gap-3 border-b border-white/5 pb-4">
                 <div className="p-2 rounded-xl bg-primary/10 text-primary">
                     <Icon className="w-4 h-4" />
                 </div>
-                <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-white">{title}</h4>
+                <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-white">
+                    {title}
+                </h4>
             </div>
-            <div className="space-y-3">
-                {children}
-            </div>
+            <div className="space-y-3">{children}</div>
         </div>
     );
 
-    const InfoRow = ({ label, value, subValue }: { label: string, value: string | React.ReactNode, subValue?: string }) => (
+    const InfoRow = ({
+        label,
+        value,
+        subValue,
+    }: {
+        label: string;
+        value: string | React.ReactNode;
+        subValue?: string;
+    }) => (
         <div className="flex flex-col gap-1">
-            <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500">{label}</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500">
+                {label}
+            </span>
             <div className="flex flex-col">
                 <span className="text-sm font-medium text-gray-200 break-all">{value}</span>
-                {subValue && <span className="text-[10px] text-gray-500 font-mono mt-0.5">{subValue}</span>}
+                {subValue && (
+                    <span className="text-[10px] text-gray-500 font-mono mt-0.5">{subValue}</span>
+                )}
             </div>
         </div>
     );
@@ -94,7 +118,9 @@ export function SessionDetailModal({ isOpen, onClose, session }: SessionDetailMo
                                 </div>
                                 <div className="flex items-center gap-2 text-gray-500">
                                     <Terminal className="w-3.5 h-3.5" />
-                                    <span className="font-mono text-[10px] tracking-wider uppercase">{session.id}</span>
+                                    <span className="font-mono text-[10px] tracking-wider uppercase">
+                                        {session.id}
+                                    </span>
                                 </div>
                             </div>
                             <button
@@ -111,19 +137,41 @@ export function SessionDetailModal({ isOpen, onClose, session }: SessionDetailMo
                                 {/* Account Info */}
                                 <InfoSection title="Account & Identity" icon={Shield}>
                                     <InfoRow label="Email Address" value={session.email} />
-                                    <InfoRow label="Provider" value={session.provider?.toUpperCase() || "GOOGLE"} />
-                                    <InfoRow label="Established" value={formatDate(session.createdAt)} />
-                                    <InfoRow label="Expires" value={formatDate(session.expiresAt)} />
+                                    <InfoRow
+                                        label="Provider"
+                                        value={session.provider?.toUpperCase() || "GOOGLE"}
+                                    />
+                                    <InfoRow
+                                        label="Established"
+                                        value={formatDate(session.createdAt)}
+                                    />
+                                    <InfoRow
+                                        label="Expires"
+                                        value={formatDate(session.expiresAt)}
+                                    />
                                 </InfoSection>
 
                                 {/* Proxy Info */}
                                 <InfoSection title="Network Configuration" icon={Globe}>
                                     {session.proxy ? (
                                         <>
-                                            <InfoRow label="Proxy Server" value={session.proxy.server} />
-                                            <InfoRow label="External IP" value={session.proxy.externalIp || "Unknown"} />
-                                            <InfoRow label="Location" value={`${session.proxy.city || ""}, ${session.proxy.country || "Unknown"}`} subValue={session.proxy.region} />
-                                            <InfoRow label="Timezone" value={session.proxy.timezone || "System Default"} />
+                                            <InfoRow
+                                                label="Proxy Server"
+                                                value={session.proxy.server}
+                                            />
+                                            <InfoRow
+                                                label="External IP"
+                                                value={session.proxy.externalIp || "Unknown"}
+                                            />
+                                            <InfoRow
+                                                label="Location"
+                                                value={`${session.proxy.city || ""}, ${session.proxy.country || "Unknown"}`}
+                                                subValue={session.proxy.region}
+                                            />
+                                            <InfoRow
+                                                label="Timezone"
+                                                value={session.proxy.timezone || "System Default"}
+                                            />
                                         </>
                                     ) : (
                                         <div className="flex items-center justify-center py-6 text-gray-500 italic text-sm">
@@ -140,34 +188,64 @@ export function SessionDetailModal({ isOpen, onClose, session }: SessionDetailMo
                                         <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
                                             <FingerprintIcon className="w-4 h-4" />
                                         </div>
-                                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-white">Browser Fingerprint</h4>
+                                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-white">
+                                            Browser Fingerprint
+                                        </h4>
                                     </div>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                         <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-4">
                                             <Monitor className="w-5 h-5 text-gray-500" />
-                                            <InfoRow label="Screen" value={`${session.fingerprint.screen.width}x${session.fingerprint.screen.height}`} subValue={`Scale: ${session.fingerprint.deviceScaleFactor}`} />
-                                            <InfoRow label="Viewport" value={`${session.fingerprint.viewport.width}x${session.fingerprint.viewport.height}`} />
+                                            <InfoRow
+                                                label="Screen"
+                                                value={`${session.fingerprint.screen.width}x${session.fingerprint.screen.height}`}
+                                                subValue={`Scale: ${session.fingerprint.deviceScaleFactor}`}
+                                            />
+                                            <InfoRow
+                                                label="Viewport"
+                                                value={`${session.fingerprint.viewport.width}x${session.fingerprint.viewport.height}`}
+                                            />
                                         </div>
                                         <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-4">
                                             <Cpu className="w-5 h-5 text-gray-500" />
-                                            <InfoRow label="Concurrency" value={`${session.fingerprint.hardwareConcurrency} Cores`} />
-                                            <InfoRow label="Memory" value={`${session.fingerprint.deviceMemory} GB`} />
+                                            <InfoRow
+                                                label="Concurrency"
+                                                value={`${session.fingerprint.hardwareConcurrency} Cores`}
+                                            />
+                                            <InfoRow
+                                                label="Memory"
+                                                value={`${session.fingerprint.deviceMemory} GB`}
+                                            />
                                         </div>
                                         <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-4">
                                             <Database className="w-5 h-5 text-gray-500" />
-                                            <InfoRow label="GPU Vendor" value={session.fingerprint.webgl.vendor} />
-                                            <InfoRow label="Renderer" value={session.fingerprint.webgl.renderer} />
+                                            <InfoRow
+                                                label="GPU Vendor"
+                                                value={session.fingerprint.webgl.vendor}
+                                            />
+                                            <InfoRow
+                                                label="Renderer"
+                                                value={session.fingerprint.webgl.renderer}
+                                            />
                                         </div>
                                         <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-4">
                                             <MapPin className="w-5 h-5 text-gray-500" />
-                                            <InfoRow label="Language" value={session.fingerprint.language} />
-                                            <InfoRow label="Timezone ID" value={session.fingerprint.timezoneId} />
+                                            <InfoRow
+                                                label="Language"
+                                                value={session.fingerprint.language}
+                                            />
+                                            <InfoRow
+                                                label="Timezone ID"
+                                                value={session.fingerprint.timezoneId}
+                                            />
                                         </div>
                                     </div>
 
                                     <div className="p-6 rounded-3xl bg-white/5 border border-white/5">
-                                        <InfoRow label="User Agent" value={session.fingerprint.userAgent} />
+                                        <InfoRow
+                                            label="User Agent"
+                                            value={session.fingerprint.userAgent}
+                                        />
                                     </div>
                                 </div>
                             )}
@@ -177,7 +255,9 @@ export function SessionDetailModal({ isOpen, onClose, session }: SessionDetailMo
                                 <div className="md:col-span-2 p-6 rounded-3xl bg-white/5 border border-white/5 space-y-4">
                                     <div className="flex items-center gap-3">
                                         <Server className="w-4 h-4 text-primary" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-white">System Flags</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-white">
+                                            System Flags
+                                        </span>
                                     </div>
                                     <div className="flex flex-wrap gap-2">
                                         {session.browserMode && (
@@ -202,9 +282,13 @@ export function SessionDetailModal({ isOpen, onClose, session }: SessionDetailMo
                                 </div>
                                 <div className="p-6 rounded-3xl bg-white/5 border border-white/5 flex flex-col justify-center items-center text-center space-y-2">
                                     <Clock className="w-6 h-6 text-primary mb-2" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Last Active</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">
+                                        Last Active
+                                    </span>
                                     <span className="text-sm font-bold text-white uppercase italic tracking-tighter">
-                                        {session.lastUsedAt ? formatDate(session.lastUsedAt) : 'Never'}
+                                        {session.lastUsedAt
+                                            ? formatDate(session.lastUsedAt)
+                                            : "Never"}
                                     </span>
                                 </div>
                             </div>

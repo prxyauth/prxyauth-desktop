@@ -2,11 +2,7 @@
     "compilerOptions": {
         "target": "ES2020",
         "useDefineForClassFields": true,
-        "lib": [
-            "ES2020",
-            "DOM",
-            "DOM.Iterable"
-        ],
+        "lib": ["ES2020", "DOM", "DOM.Iterable"],
         "module": "ESNext",
         "skipLibCheck": true,
         "moduleResolution": "bundler",
@@ -20,23 +16,13 @@
         "noUnusedParameters": true,
         "noFallthroughCasesInSwitch": true,
         "composite": true,
-        "baseUrl": ".",
         "paths": {
-            "@core/*": [
-                "src/renderer/core/*"
-            ],
-            "@shared/*": [
-                "src/renderer/shared/*"
-            ],
-            "@features/*": [
-                "src/renderer/features/*"
-            ]
+            "@core/*": ["./src/renderer/core/*"],
+            "@shared/*": ["./src/renderer/shared/*"],
+            "@features/*": ["./src/renderer/features/*"]
         }
     },
-    "include": [
-        "src/renderer",
-        "src/renderer/**/*.d.ts"
-    ],
+    "include": ["src/renderer", "src/renderer/**/*.d.ts"],
     "references": [
         {
             "path": "./tsconfig.main.json"

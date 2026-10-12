@@ -16,127 +16,119 @@ import { TronPaymentPage } from "@features/marketplace/TronPaymentPage";
 import { TransactionsView } from "@features/transactions/TransactionsView";
 
 export function MainLayout() {
-  const [activeTab, setActiveTab] = useState("sessions");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
-    null,
-  );
-  const [selectedTransactionId, setSelectedTransactionId] = useState<
-    string | null
-  >(null);
-  const [searchQuery, setSearchQuery] = useState("");
+    const [activeTab, setActiveTab] = useState("sessions");
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+    const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+    const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
 
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    setIsMobileSidebarOpen(false);
-  };
+    const handleTabChange = (tab: string) => {
+        setActiveTab(tab);
+        setIsMobileSidebarOpen(false);
+    };
 
-  const handleNavigateToSession = (sessionId: string) => {
-    setSelectedSessionId(sessionId);
-    setActiveTab("session-detail");
-  };
+    const handleNavigateToSession = (sessionId: string) => {
+        setSelectedSessionId(sessionId);
+        setActiveTab("session-detail");
+    };
 
-  const handleNavigateToPayment = (transactionId: string) => {
-    setSelectedTransactionId(transactionId);
-    setActiveTab("payment");
-  };
+    const handleNavigateToPayment = (transactionId: string) => {
+        setSelectedTransactionId(transactionId);
+        setActiveTab("payment");
+    };
 
-  const handleBackToDashboard = () => {
-    setSelectedSessionId(null);
-    handleTabChange("sessions");
-  };
+    const handleBackToDashboard = () => {
+        setSelectedSessionId(null);
+        handleTabChange("sessions");
+    };
 
-  const renderView = () => {
-    switch (activeTab) {
-      case "sessions":
-        return (
-          <DashboardView
-            onNavigateToSession={handleNavigateToSession}
-            searchQuery={searchQuery}
-          />
-        );
-      case "session-detail":
-        return selectedSessionId ? (
-          <SessionDetailPage
-            sessionId={selectedSessionId}
-            onBack={handleBackToDashboard}
-          />
-        ) : (
-          <DashboardView
-            onNavigateToSession={handleNavigateToSession}
-            searchQuery={searchQuery}
-          />
-        );
-      case "proxies":
-        return <ProxiesView />;
-      case "proxy-providers":
-        return <ProxyProvidersView />;
-      case "transactions":
-        return <TransactionsView />;
-      case "notifications":
-        return <SettingsView initialTab="notifications" />;
-      case "settings":
-        return <SettingsView initialTab="api-keys" />;
-      case "marketplace":
-        return (
-          <MarketplaceView onNavigateToPayment={handleNavigateToPayment} />
-        );
-      case "payment":
-        return selectedTransactionId ? (
-          <TronPaymentPage
-            transactionId={selectedTransactionId}
-            onBack={() => setActiveTab("marketplace")}
-            onSuccess={() => {
-              setSelectedTransactionId(null);
-              setActiveTab("marketplace");
-            }}
-          />
-        ) : (
-          <MarketplaceView onNavigateToPayment={handleNavigateToPayment} />
-        );
-      default:
-        return (
-          <DashboardView
-            onNavigateToSession={handleNavigateToSession}
-            searchQuery={searchQuery}
-          />
-        );
-    }
-  };
+    const renderView = () => {
+        switch (activeTab) {
+            case "sessions":
+                return (
+                    <DashboardView
+                        onNavigateToSession={handleNavigateToSession}
+                        searchQuery={searchQuery}
+                    />
+                );
+            case "session-detail":
+                return selectedSessionId ? (
+                    <SessionDetailPage
+                        sessionId={selectedSessionId}
+                        onBack={handleBackToDashboard}
+                    />
+                ) : (
+                    <DashboardView
+                        onNavigateToSession={handleNavigateToSession}
+                        searchQuery={searchQuery}
+                    />
+                );
+            case "proxies":
+                return <ProxiesView />;
+            case "proxy-providers":
+                return <ProxyProvidersView />;
+            case "transactions":
+                return <TransactionsView />;
+            case "notifications":
+                return <SettingsView initialTab="notifications" />;
+            case "settings":
+                return <SettingsView initialTab="api-keys" />;
+            case "marketplace":
+                return <MarketplaceView onNavigateToPayment={handleNavigateToPayment} />;
+            case "payment":
+                return selectedTransactionId ? (
+                    <TronPaymentPage
+                        transactionId={selectedTransactionId}
+                        onBack={() => setActiveTab("marketplace")}
+                        onSuccess={() => {
+                            setSelectedTransactionId(null);
+                            setActiveTab("marketplace");
+                        }}
+                    />
+                ) : (
+                    <MarketplaceView onNavigateToPayment={handleNavigateToPayment} />
+                );
+            default:
+                return (
+                    <DashboardView
+                        onNavigateToSession={handleNavigateToSession}
+                        searchQuery={searchQuery}
+                    />
+                );
+        }
+    };
 
-  return (
-    <div className="flex h-screen bg-[#020204] overflow-hidden font-sans text-slate-200 select-none">
-      {/* Sidebar */}
-      <Sidebar
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        isCollapsed={!isSidebarOpen}
-        onToggleCollapse={() => setIsSidebarOpen(!isSidebarOpen)}
-        isOpen={isMobileSidebarOpen}
-        onClose={() => setIsMobileSidebarOpen(false)}
-      />
+    return (
+        <div className="flex h-screen bg-[#020204] overflow-hidden font-sans text-slate-200 select-none">
+            {/* Sidebar */}
+            <Sidebar
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
+                isCollapsed={!isSidebarOpen}
+                onToggleCollapse={() => setIsSidebarOpen(!isSidebarOpen)}
+                isOpen={isMobileSidebarOpen}
+                onClose={() => setIsMobileSidebarOpen(false)}
+            />
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-[#050505]">
-        <NotificationBanner 
-          onNavigateToMarketplace={() => handleTabChange("marketplace")}
-          onNavigateToPayment={handleNavigateToPayment}
-        />
-        <TopNavbar
-          onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-          onTabChange={handleTabChange}
-          activeTab={activeTab}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-        />
+            {/* Main Content */}
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-[#050505]">
+                <NotificationBanner
+                    onNavigateToMarketplace={() => handleTabChange("marketplace")}
+                    onNavigateToPayment={handleNavigateToPayment}
+                />
+                <TopNavbar
+                    onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+                    onTabChange={handleTabChange}
+                    activeTab={activeTab}
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                />
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
-          <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            {renderView()}
-          </div>
-        </main>
-      </div>
-    </div>
-  );
+                <main className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+                    <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">{renderView()}</div>
+                </main>
+            </div>
+        </div>
+    );
 }
