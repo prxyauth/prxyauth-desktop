@@ -4,7 +4,9 @@ import { LoginView } from "@features/auth/LoginView";
 import { RegisterView } from "@features/auth/RegisterView";
 import { BrowserSetupView } from "@features/browser-setup/BrowserSetupView";
 import { useBrowserStatus } from "@features/browser-setup/hooks/useBrowserStatus";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "@features/sessions/context/SessionContext";
+import { queryClient } from "@core/query/client";
 import { MainLayout } from "@shared/components/layout/MainLayout";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
@@ -88,6 +90,7 @@ function AppContent() {
 
 export default function App() {
     return (
+        <QueryClientProvider client={queryClient}>
         <AuthProvider>
             <SessionProvider>
                 <div className="relative min-h-screen bg-[#050505] selection:bg-primary/30 selection:text-white">
@@ -96,5 +99,6 @@ export default function App() {
                 </div>
             </SessionProvider>
         </AuthProvider>
+        </QueryClientProvider>
     );
 }

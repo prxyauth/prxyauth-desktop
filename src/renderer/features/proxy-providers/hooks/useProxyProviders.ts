@@ -1,18 +1,21 @@
 /**
- * useProxyProviders Hook
+ * useProxyProviders — provider configs on React Query.
+ * Public contract unchanged from the hand-rolled version (testResult
+ * stays local: one-shot action feedback, not server state).
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { proxyProviderApi, ApiError } from "@core/api/client";
 import { ProxyProviderConfig, ProxyProviderType, SaveProviderRequest } from "@core/types";
 
+export const proxyProviderKeys = {
+    all: ["proxy-providers"] as const,
+    list: () => [...proxyProviderKeys.all, "list"] as const,
+};
+
 export function useProxyProviders() {
-    const [providers, setProviders] = useState<ProxyProviderConfig[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [isSaving, setIsSaving] = useState(false);
-    const [isRemoving, setIsRemoving] = useState<ProxyProviderType | null>(null);
-    const [isTesting, setIsTesting] = useState<ProxyProviderType | null>(null);
+    const client = useQueryClient();
     const [testResult, setTestResult] = useState<{
         provider: ProxyProviderType;
         success: boolean;
@@ -20,90 +23,72 @@ export function useProxyProviders() {
         error?: string;
     } | null>(null);
 
-    // Fetch providers
+    const listQuery = useQuery({
+        queryKey: proxyProviderKeys.list(),
+        queryFn: () => proxyProviderApi.list(),
+        enabled:
+            typeof localStorage !== "undefined" && Boolean(localStorage.getItem("prx_token")),
+    });
+
+    const saveMutation = useMutation({
+        mutationFn: (data: SaveProviderRequest) => proxyProviderApi.save(data),
+        onSuccess: () => client.invalidateQueries({ queryKey: proxyProviderKeys.all }),
+    });
+
+    const removeMutation = useMutation({
+        mutationFn: (provider: ProxyProviderType) => proxyProviderApi.remove(provider),
+        onSuccess: () => client.invalidateQueries({ queryKey: proxyProviderKeys.all }),
+    });
+
+    const toggleMutation = useMutation({
+        mutationFn: (input: { provider: ProxyProviderType; enabled: boolean }) =>
+            proxyProviderApi.toggle(input.provider, input.enabled),
+        onSuccess: () => client.invalidateQueries({ queryKey: proxyProviderKeys.all }),
+    });
+
     const fetchProviders = useCallback(async () => {
-        try {
-            setIsLoading(true);
-            setError(null);
-            const data = await proxyProviderApi.list();
-            setProviders(data);
-        } catch (err) {
-            const message = err instanceof ApiError ? err.message : "Failed to fetch providers";
-            setError(message);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
+        await listQuery.refetch();
+    }, [listQuery]);
 
-    // Load on mount
-    useEffect(() => {
-        if (localStorage.getItem("prx_token")) {
-            fetchProviders();
-        }
-    }, [fetchProviders]);
-
-    // Save provider
     const save = useCallback(
         async (data: SaveProviderRequest): Promise<boolean> => {
             try {
-                setIsSaving(true);
-                setError(null);
-                await proxyProviderApi.save(data);
-                await fetchProviders();
+                await saveMutation.mutateAsync(data);
                 return true;
-            } catch (err) {
-                const message = err instanceof ApiError ? err.message : "Failed to save provider";
-                setError(message);
+            } catch {
+                setTestResult(null);
                 return false;
-            } finally {
-                setIsSaving(false);
             }
         },
-        [fetchProviders],
+        [saveMutation],
     );
 
-    // Remove provider
     const remove = useCallback(
         async (provider: ProxyProviderType): Promise<boolean> => {
             try {
-                setIsRemoving(provider);
-                setError(null);
-                await proxyProviderApi.remove(provider);
-                await fetchProviders();
+                await removeMutation.mutateAsync(provider);
                 return true;
-            } catch (err) {
-                const message = err instanceof ApiError ? err.message : "Failed to remove provider";
-                setError(message);
+            } catch {
                 return false;
-            } finally {
-                setIsRemoving(null);
             }
         },
-        [fetchProviders],
+        [removeMutation],
     );
 
-    // Toggle provider
     const toggle = useCallback(
         async (provider: ProxyProviderType, enabled: boolean): Promise<boolean> => {
             try {
-                setError(null);
-                await proxyProviderApi.toggle(provider, enabled);
-                await fetchProviders();
+                await toggleMutation.mutateAsync({ provider, enabled });
                 return true;
-            } catch (err) {
-                const message = err instanceof ApiError ? err.message : "Failed to toggle provider";
-                setError(message);
+            } catch {
                 return false;
             }
         },
-        [fetchProviders],
+        [toggleMutation],
     );
 
-    // Test provider credentials
     const test = useCallback(async (provider: ProxyProviderType): Promise<boolean> => {
         try {
-            setIsTesting(provider);
-            setTestResult(null);
             const result = await proxyProviderApi.test(provider);
             setTestResult({
                 provider,
@@ -120,26 +105,23 @@ export function useProxyProviders() {
                 error: message,
             });
             return false;
-        } finally {
-            setIsTesting(null);
         }
     }, []);
 
-    // Get provider by type
     const getProvider = useCallback(
         (type: ProxyProviderType): ProxyProviderConfig | undefined => {
-            return providers.find((p) => p.provider === type);
+            return listQuery.data?.find((p) => p.provider === type);
         },
-        [providers],
+        [listQuery.data],
     );
 
     return {
-        providers,
-        isLoading,
-        error,
-        isSaving,
-        isRemoving,
-        isTesting,
+        providers: listQuery.data ?? [],
+        isLoading: listQuery.isLoading,
+        error: listQuery.error instanceof Error ? listQuery.error.message : null,
+        isSaving: saveMutation.isPending,
+        isRemoving: removeMutation.isPending ? removeMutation.variables ?? null : null,
+        isTesting: toggleMutation.isPending ? toggleMutation.variables?.provider ?? null : null,
         testResult,
         refresh: fetchProviders,
         save,

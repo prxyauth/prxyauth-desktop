@@ -1,10 +1,19 @@
 /**
- * useProxies - Custom hook for proxy management
+ * useProxies — proxy pool data on React Query.
+ *
+ * Public contract unchanged from the hand-rolled version so views did
+ * not need to change; internally queries/mutations own the state.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { proxyApi, ApiError } from "@core/api/client";
 import { ProxyHealthInfo, ProxyPoolStats, ProxyConfig } from "@core/types";
+
+export const proxyKeys = {
+    all: ["proxies"] as const,
+    stats: () => [...proxyKeys.all, "stats"] as const,
+};
 
 interface UseProxiesReturn {
     stats: ProxyPoolStats | null;
@@ -23,115 +32,96 @@ interface UseProxiesReturn {
 }
 
 export function useProxies(): UseProxiesReturn {
-    const [stats, setStats] = useState<ProxyPoolStats | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [isAdding, setIsAdding] = useState(false);
-    const [isRemoving, setIsRemoving] = useState<string | null>(null);
+    const client = useQueryClient();
     const [isValidating, setIsValidating] = useState(false);
 
-    const refresh = useCallback(async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const data = await proxyApi.getStats();
-            setStats(data);
-        } catch (err) {
-            const message = err instanceof ApiError ? err.message : "Failed to load proxy stats";
-            setError(message);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
+    const statsQuery = useQuery({
+        queryKey: proxyKeys.stats(),
+        queryFn: () => proxyApi.getStats(),
+        enabled: typeof localStorage !== "undefined" && Boolean(localStorage.getItem("prx_token")),
+    });
 
-    useEffect(() => {
-        // Only refresh if token exists
-        if (localStorage.getItem("prx_token")) {
-            refresh();
-        }
-    }, [refresh]);
+    const addMutation = useMutation({
+        mutationFn: (input: { proxy: ProxyConfig; validate: boolean }) =>
+            proxyApi.add({ ...input.proxy, validate: input.validate }),
+        onSuccess: () => client.invalidateQueries({ queryKey: proxyKeys.all }),
+    });
+
+    const removeMutation = useMutation({
+        mutationFn: (server: string) => proxyApi.remove(server),
+        onSuccess: () => client.invalidateQueries({ queryKey: proxyKeys.all }),
+    });
+
+    const refresh = useCallback(async () => {
+        await statsQuery.refetch();
+    }, [statsQuery]);
 
     const add = useCallback(
         async (proxy: ProxyConfig, validate: boolean = true): Promise<boolean> => {
-            setIsAdding(true);
-            setError(null);
             try {
-                const response = await proxyApi.add({ ...proxy, validate });
-                if (response.success) {
-                    await refresh();
-                    return true;
-                }
+                const response = await addMutation.mutateAsync({ proxy, validate });
+                if (response.success) return true;
                 throw new Error(response.error || "Failed to add proxy");
-            } catch (err) {
-                const message = err instanceof ApiError ? err.message : "Failed to add proxy";
-                setError(message);
+            } catch {
                 return false;
-            } finally {
-                setIsAdding(false);
             }
         },
-        [refresh],
+        [addMutation],
     );
 
     const remove = useCallback(
         async (server: string): Promise<boolean> => {
-            setIsRemoving(server);
-            setError(null);
             try {
-                const response = await proxyApi.remove(server);
-                if (response.success) {
-                    await refresh();
-                    return true;
-                }
+                const response = await removeMutation.mutateAsync(server);
+                if (response.success) return true;
                 throw new Error(response.error || "Failed to remove proxy");
-            } catch (err) {
-                const message = err instanceof ApiError ? err.message : "Failed to remove proxy";
-                setError(message);
+            } catch {
                 return false;
-            } finally {
-                setIsRemoving(null);
             }
         },
-        [refresh],
+        [removeMutation],
     );
 
-    const validate = useCallback(async (proxy: ProxyConfig) => {
-        setIsValidating(true);
-        try {
-            const response = await proxyApi.validate(proxy);
-            if (response.success && response.data) {
+    const validate = useCallback(
+        async (proxy: ProxyConfig) => {
+            setIsValidating(true);
+            try {
+                const response = await proxyApi.validate(proxy);
+                if (response.success && response.data) {
+                    return {
+                        success: true,
+                        ip: response.data.ip,
+                        latency: response.data.latency,
+                        message: response.data.message,
+                    };
+                }
                 return {
-                    success: true,
-                    ip: response.data.ip,
-                    latency: response.data.latency,
-                    message: response.data.message,
+                    success: false,
+                    message: response.error || "Validation failed",
                 };
+            } catch (err) {
+                return {
+                    success: false,
+                    message: err instanceof ApiError ? err.message : "Validation failed",
+                };
+            } finally {
+                setIsValidating(false);
             }
-            return {
-                success: false,
-                message: response.error || "Validation failed",
-            };
-        } catch (err) {
-            return {
-                success: false,
-                message: err instanceof ApiError ? err.message : "Validation failed",
-            };
-        } finally {
-            setIsValidating(false);
-        }
-    }, []);
+        },
+        [],
+    );
 
     return {
-        stats,
-        proxies: stats?.proxies || [],
-        isLoading,
-        error,
+        stats: statsQuery.data ?? null,
+        proxies: statsQuery.data?.proxies || [],
+        isLoading: statsQuery.isLoading,
+        error: statsQuery.error instanceof Error ? statsQuery.error.message : null,
         refresh,
         add,
         remove,
         validate,
-        isAdding,
-        isRemoving,
+        isAdding: addMutation.isPending,
+        isRemoving: removeMutation.isPending ? removeMutation.variables ?? null : null,
         isValidating,
     };
 }

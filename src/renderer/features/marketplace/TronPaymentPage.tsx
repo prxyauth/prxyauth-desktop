@@ -1,6 +1,9 @@
 "use client";
 
-import { billingApi } from "@core/api/client";
+import {
+    useTransaction,
+    useVerifyPayment,
+} from "@features/billing/hooks/useBilling";
 import { CheckoutResponseData } from "@core/types";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -22,33 +25,25 @@ interface TronPaymentPageProps {
 }
 
 export function TronPaymentPage({ transactionId, onBack, onSuccess }: TronPaymentPageProps) {
-    const [checkoutData, setCheckoutData] = useState<
-        (CheckoutResponseData & { amount: number }) | null
-    >(null);
+    // Transaction data on React Query — the query owns loading/error and
+    // re-fetches when the id changes.
+    const { data: transactionResponse, isLoading: loading } = useTransaction(transactionId);
+    const checkoutData: (CheckoutResponseData & { amount: number }) | null =
+        transactionResponse?.success && transactionResponse.data
+            ? (transactionResponse.data as CheckoutResponseData & { amount: number })
+            : null;
+
     const [copied, setCopied] = useState<"address" | "amount" | null>(null);
     const [isVerifying, setIsVerifying] = useState(false);
     const [status, setStatus] = useState<"PENDING" | "PAID" | "FAILED" | "EXPIRED">("PENDING");
-    const [loading, setLoading] = useState(true);
     const [timeLeft, setTimeLeft] = useState<string>("");
 
     useEffect(() => {
-        const fetchTransaction = async () => {
-            try {
-                const response = await billingApi.getTransaction(transactionId);
-                if (response.success && response.data) {
-                    setCheckoutData(response.data as any);
-                    if (response.data.status === "PAID") setStatus("PAID");
-                    else if (response.data.status === "EXPIRED") setStatus("EXPIRED");
-                }
-            } catch (err) {
-                console.error("Failed to fetch transaction", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchTransaction();
-    }, [transactionId]);
+        if (transactionResponse?.success && transactionResponse.data) {
+            if (transactionResponse.data.status === "PAID") setStatus("PAID");
+            else if (transactionResponse.data.status === "EXPIRED") setStatus("EXPIRED");
+        }
+    }, [transactionResponse]);
 
     // Countdown logic
     useEffect(() => {
@@ -75,13 +70,16 @@ export function TronPaymentPage({ transactionId, onBack, onSuccess }: TronPaymen
         return () => clearInterval(timer);
     }, [checkoutData, status]);
 
-    // Polling logic
+    // Payment verification via the billing mutation hook — the interval
+    // just re-invokes it; cache/invalidation live in the slice.
+    const verifyMutation = useVerifyPayment();
+
     useEffect(() => {
-        let interval: NodeJS.Timeout;
+        let interval: ReturnType<typeof setInterval>;
         if (checkoutData && status === "PENDING") {
             interval = setInterval(async () => {
                 try {
-                    const result = await billingApi.verifyPayment(transactionId);
+                    const result = await verifyMutation.mutateAsync(transactionId);
                     if (result.status === "PAID") {
                         setStatus("PAID");
                         clearInterval(interval);
@@ -95,6 +93,7 @@ export function TronPaymentPage({ transactionId, onBack, onSuccess }: TronPaymen
             }, 5000);
         }
         return () => clearInterval(interval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [checkoutData, status, transactionId]);
 
     const copyToClipboard = (text: string, type: "address" | "amount") => {
@@ -106,7 +105,7 @@ export function TronPaymentPage({ transactionId, onBack, onSuccess }: TronPaymen
     const manualVerify = async () => {
         try {
             setIsVerifying(true);
-            const result = await billingApi.verifyPayment(transactionId);
+            const result = await verifyMutation.mutateAsync(transactionId);
             if (result.status === "PAID") {
                 setStatus("PAID");
             }

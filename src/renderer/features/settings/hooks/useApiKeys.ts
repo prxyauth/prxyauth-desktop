@@ -1,78 +1,67 @@
 /**
- * useApiKeys Hook
- * Handles fetching, generating, and revoking API keys
+ * useApiKeys — API key management on React Query.
+ *
+ * Public contract unchanged from the hand-rolled version so views did
+ * not need to change; internally queries/mutations own the state.
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiKeyApi } from "@core/api/client";
-import { ApiKey, GenerateApiKeyRequest } from "@core/types";
+import { GenerateApiKeyRequest } from "@core/types";
+
+export const apiKeyKeys = {
+    all: ["api-keys"] as const,
+    list: () => [...apiKeyKeys.all, "list"] as const,
+};
 
 export function useApiKeys() {
-    const [keys, setKeys] = useState<ApiKey[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const client = useQueryClient();
+
+    const listQuery = useQuery({
+        queryKey: apiKeyKeys.list(),
+        queryFn: () => apiKeyApi.list(),
+    });
+
+    const generateMutation = useMutation({
+        mutationFn: (data: GenerateApiKeyRequest) => apiKeyApi.generate(data),
+        onSuccess: () => client.invalidateQueries({ queryKey: apiKeyKeys.all }),
+    });
+
+    const revokeMutation = useMutation({
+        mutationFn: (keyId: string) => apiKeyApi.revoke(keyId),
+        onSuccess: () => client.invalidateQueries({ queryKey: apiKeyKeys.all }),
+    });
 
     const refresh = useCallback(async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const data = await apiKeyApi.list();
-            setKeys(data);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to fetch API keys");
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
+        await listQuery.refetch();
+    }, [listQuery]);
 
-    const generate = async (data: GenerateApiKeyRequest) => {
-        setIsLoading(true);
-        setError(null);
+    const generate = useCallback(async (data: GenerateApiKeyRequest) => {
         try {
-            const result = await apiKeyApi.generate(data);
+            const result = await generateMutation.mutateAsync(data);
             if (result.success) {
-                await refresh();
                 return result.data;
-            } else {
-                setError(result.error || "Failed to generate API key");
-                return null;
             }
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to generate API key");
             return null;
-        } finally {
-            setIsLoading(false);
+        } catch {
+            return null;
         }
-    };
+    }, [generateMutation]);
 
-    const revoke = async (keyId: string) => {
-        setIsLoading(true);
-        setError(null);
+    const revoke = useCallback(async (keyId: string) => {
         try {
-            const result = await apiKeyApi.revoke(keyId);
-            if (result.success) {
-                await refresh();
-                return true;
-            } else {
-                setError(result.message || "Failed to revoke API key");
-                return false;
-            }
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to revoke API key");
+            const result = await revokeMutation.mutateAsync(keyId);
+            return Boolean(result.success);
+        } catch {
             return false;
-        } finally {
-            setIsLoading(false);
         }
-    };
-
-    useEffect(() => {
-        refresh();
-    }, [refresh]);
+    }, [revokeMutation]);
 
     return {
-        keys,
-        isLoading,
-        error,
+        keys: listQuery.data ?? [],
+        isLoading: listQuery.isLoading || generateMutation.isPending || revokeMutation.isPending,
+        error: listQuery.error instanceof Error ? listQuery.error.message : null,
         refresh,
         generate,
         revoke,

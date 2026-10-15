@@ -3,7 +3,6 @@
  * Ported from fe-prxyauth/billing/transactions, using desktop design system
  */
 
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
     Receipt,
@@ -14,41 +13,16 @@ import {
     Loader2,
     ArrowLeftRight,
 } from "lucide-react";
-import { billingApi } from "@core/api/client";
+import { useTransactions } from "@features/billing/hooks/useBilling";
 import { Transaction } from "@core/types";
 import { cn } from "@core/utils";
 
 export function TransactionsView() {
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        let interval: ReturnType<typeof setInterval>;
-
-        const fetchTransactions = async (showLoading = true) => {
-            try {
-                if (showLoading) setIsLoading(true);
-                const data = await billingApi.listTransactions();
-                setTransactions(data);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : "Failed to load transactions");
-            } finally {
-                if (showLoading) setIsLoading(false);
-            }
-        };
-
-        fetchTransactions();
-
-        // Poll every 15 seconds to sync state changes (like PENDING -> EXPIRED)
-        interval = setInterval(() => {
-            fetchTransactions(false);
-        }, 15000);
-
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, []);
+    // Server state on React Query — the 15s poll to catch PENDING ->
+    // EXPIRED transitions is refetchInterval, owned by the query.
+    const { data: transactions = [], isLoading, error } = useTransactions({
+        refetchInterval: 15_000,
+    });
 
     const getStatusConfig = (status: Transaction["status"]) => {
         switch (status) {
@@ -125,7 +99,7 @@ export function TransactionsView() {
                             <XCircle className="w-8 h-8" />
                         </div>
                         <h3 className="text-white font-bold mb-2">Failed to load</h3>
-                        <p className="text-sm text-gray-500">{error}</p>
+                        <p className="text-sm text-gray-500">{error.message}</p>
                     </div>
                 ) : transactions.length === 0 ? (
                     <div className="p-20 flex flex-col items-center justify-center text-center">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { billingApi } from "@core/api/client";
+import { useLicenses, useTransactions } from "@features/billing/hooks/useBilling";
 import { ProviderLicense, Transaction } from "@core/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertCircle, CreditCard, X, ExternalLink } from "lucide-react";
@@ -37,138 +37,123 @@ export function NotificationBanner({
         }
     }, []);
 
+    const { data: licenses = [] } = useLicenses({ refetchInterval: 5 * 60 * 1000 });
+    const { data: transactions = [] } = useTransactions({ refetchInterval: 5 * 60 * 1000 });
+
+    // Derive banner items from server state — no fetch effect, no interval
+    // bookkeeping: React Query owns the 5-minute refresh cadence.
     useEffect(() => {
-        const fetchNotifications = async () => {
-            try {
-                const [licenses, transactions] = await Promise.all([
-                    billingApi.listLicenses().catch(() => []),
-                    billingApi.listTransactions().catch(() => []),
-                ]);
+        const newNotifications: NotificationItem[] = [];
+        const now = new Date();
+        const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-                const newNotifications: NotificationItem[] = [];
-                const now = new Date();
-                const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-                // Check for expiring licenses
-                licenses.forEach((license: ProviderLicense) => {
-                    if (license.expiresAt) {
-                        const expiryDate = new Date(license.expiresAt);
-                        if (license.status === "ACTIVE") {
-                            if (expiryDate <= sevenDaysFromNow && expiryDate > now) {
-                                const daysLeft = Math.ceil(
-                                    (expiryDate.getTime() - now.getTime()) / (1000 * 3600 * 24),
-                                );
-                                const id = `exp-${license.provider}-${license.expiresAt}`;
-                                if (!dismissedIds.has(id)) {
-                                    newNotifications.push({
-                                        id,
-                                        type: "warning",
-                                        icon: AlertCircle,
-                                        message: (
-                                            <span>
-                                                Your <strong>{license.provider}</strong>{" "}
-                                                subscription expires in {daysLeft} day
-                                                {daysLeft !== 1 ? "s" : ""}.
-                                                <button
-                                                    onClick={onNavigateToMarketplace}
-                                                    className="ml-2 underline font-bold hover:text-white"
-                                                >
-                                                    Renew now
-                                                </button>
-                                            </span>
-                                        ),
-                                    });
-                                }
-                            } else if (expiryDate <= now) {
-                                const id = `expired-${license.provider}-${license.expiresAt}`;
-                                if (!dismissedIds.has(id)) {
-                                    newNotifications.push({
-                                        id,
-                                        type: "warning",
-                                        icon: AlertCircle,
-                                        message: (
-                                            <span>
-                                                Your <strong>{license.provider}</strong>{" "}
-                                                subscription has expired.
-                                                <button
-                                                    onClick={onNavigateToMarketplace}
-                                                    className="ml-2 underline font-bold hover:text-white"
-                                                >
-                                                    Renew now
-                                                </button>
-                                            </span>
-                                        ),
-                                    });
-                                }
-                            }
-                        } else if (license.status === "EXPIRED") {
-                            const id = `expired-${license.provider}-${license.expiresAt}`;
-                            if (!dismissedIds.has(id)) {
-                                newNotifications.push({
-                                    id,
-                                    type: "warning",
-                                    icon: AlertCircle,
-                                    message: (
-                                        <span>
-                                            Your <strong>{license.provider}</strong> subscription
-                                            has expired.
-                                            <button
-                                                onClick={onNavigateToMarketplace}
-                                                className="ml-2 underline font-bold hover:text-white"
-                                            >
-                                                Renew now
-                                            </button>
-                                        </span>
-                                    ),
-                                });
-                            }
-                        }
-                    }
-                });
-
-                // Check for pending transactions
-                transactions.forEach((tx: Transaction) => {
-                    if (tx.status === "PENDING") {
-                        const id = `tx-${tx.id}`;
+        // Check for expiring licenses
+        licenses.forEach((license: ProviderLicense) => {
+            if (license.expiresAt) {
+                const expiryDate = new Date(license.expiresAt);
+                if (license.status === "ACTIVE") {
+                    if (expiryDate <= sevenDaysFromNow && expiryDate > now) {
+                        const daysLeft = Math.ceil(
+                            (expiryDate.getTime() - now.getTime()) / (1000 * 3600 * 24),
+                        );
+                        const id = `exp-${license.provider}-${license.expiresAt}`;
                         if (!dismissedIds.has(id)) {
                             newNotifications.push({
                                 id,
-                                type: "info",
-                                icon: CreditCard,
+                                type: "warning",
+                                icon: AlertCircle,
                                 message: (
                                     <span>
-                                        You have a pending payment of {tx.amount} {tx.currency} for{" "}
-                                        {tx.provider}.
+                                        Your <strong>{license.provider}</strong>{" "}
+                                        subscription expires in {daysLeft} day
+                                        {daysLeft !== 1 ? "s" : ""}.
                                         <button
-                                            onClick={() => onNavigateToPayment(tx.id)}
-                                            className="ml-2 underline font-bold hover:text-white inline-flex items-center"
+                                            onClick={onNavigateToMarketplace}
+                                            className="ml-2 underline font-bold hover:text-white"
                                         >
-                                            Complete Payment{" "}
-                                            <ExternalLink className="w-3 h-3 ml-1" />
+                                            Renew now
+                                        </button>
+                                    </span>
+                                ),
+                            });
+                        }
+                    } else if (expiryDate <= now) {
+                        const id = `expired-${license.provider}-${license.expiresAt}`;
+                        if (!dismissedIds.has(id)) {
+                            newNotifications.push({
+                                id,
+                                type: "warning",
+                                icon: AlertCircle,
+                                message: (
+                                    <span>
+                                        Your <strong>{license.provider}</strong>{" "}
+                                        subscription has expired.
+                                        <button
+                                            onClick={onNavigateToMarketplace}
+                                            className="ml-2 underline font-bold hover:text-white"
+                                        >
+                                            Renew now
                                         </button>
                                     </span>
                                 ),
                             });
                         }
                     }
-                });
-
-                setNotifications(newNotifications);
-                if (newNotifications.length > 0) {
-                    setIsVisible(true);
-                } else {
-                    setIsVisible(false);
+                } else if (license.status === "EXPIRED") {
+                    const id = `expired-${license.provider}-${license.expiresAt}`;
+                    if (!dismissedIds.has(id)) {
+                        newNotifications.push({
+                            id,
+                            type: "warning",
+                            icon: AlertCircle,
+                            message: (
+                                <span>
+                                    Your <strong>{license.provider}</strong> subscription
+                                    has expired.
+                                    <button
+                                        onClick={onNavigateToMarketplace}
+                                        className="ml-2 underline font-bold hover:text-white"
+                                    >
+                                        Renew now
+                                    </button>
+                                </span>
+                            ),
+                        });
+                    }
                 }
-            } catch (error) {
-                console.error("Failed to fetch notifications:", error);
             }
-        };
+        });
 
-        fetchNotifications();
-        // Refresh every 5 minutes
-        const interval = setInterval(fetchNotifications, 5 * 60 * 1000);
-        return () => clearInterval(interval);
-    }, [dismissedIds, onNavigateToMarketplace, onNavigateToPayment]);
+        // Check for pending transactions
+        transactions.forEach((tx: Transaction) => {
+            if (tx.status === "PENDING") {
+                const id = `tx-${tx.id}`;
+                if (!dismissedIds.has(id)) {
+                    newNotifications.push({
+                        id,
+                        type: "info",
+                        icon: CreditCard,
+                        message: (
+                            <span>
+                                You have a pending payment of {tx.amount} {tx.currency} for{" "}
+                                {tx.provider}.
+                                <button
+                                    onClick={() => onNavigateToPayment(tx.id)}
+                                    className="ml-2 underline font-bold hover:text-white inline-flex items-center"
+                                >
+                                    Complete Payment{" "}
+                                    <ExternalLink className="w-3 h-3 ml-1" />
+                                </button>
+                            </span>
+                        ),
+                    });
+                }
+            }
+        });
+
+        setNotifications(newNotifications);
+        setIsVisible(newNotifications.length > 0);
+    }, [licenses, transactions, dismissedIds, onNavigateToMarketplace, onNavigateToPayment]);
 
     // Auto-rotate if multiple notifications
     useEffect(() => {

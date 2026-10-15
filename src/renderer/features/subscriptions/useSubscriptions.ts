@@ -1,11 +1,17 @@
 /**
- * useSubscriptions Hook
- * Manages provider subscription state for Electron
+ * useSubscriptions — provider licenses on React Query.
+ * Public contract unchanged from the hand-rolled version.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { billingApi } from "@core/api/client";
 import { ProviderLicense } from "@core/types";
+
+export const subscriptionKeys = {
+    all: ["subscriptions"] as const,
+    list: () => [...subscriptionKeys.all, "list"] as const,
+};
 
 interface UseSubscriptionsReturn {
     subscriptions: ProviderLicense[];
@@ -15,32 +21,21 @@ interface UseSubscriptionsReturn {
 }
 
 export function useSubscriptions(): UseSubscriptionsReturn {
-    const [subscriptions, setSubscriptions] = useState<ProviderLicense[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const listQuery = useQuery({
+        queryKey: subscriptionKeys.list(),
+        queryFn: () => billingApi.listLicenses(),
+        enabled:
+            typeof localStorage !== "undefined" && Boolean(localStorage.getItem("prx_token")),
+    });
 
-    const fetchSubscriptions = useCallback(async () => {
-        try {
-            setIsLoading(true);
-            setError(null);
-            const licenses = await billingApi.listLicenses();
-            setSubscriptions(licenses);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to load subscriptions");
-            console.error("Error fetching subscriptions:", err);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchSubscriptions();
-    }, [fetchSubscriptions]);
+    const refresh = useCallback(async () => {
+        await listQuery.refetch();
+    }, [listQuery]);
 
     return {
-        subscriptions,
-        isLoading,
-        error,
-        refresh: fetchSubscriptions,
+        subscriptions: listQuery.data ?? [],
+        isLoading: listQuery.isLoading,
+        error: listQuery.error instanceof Error ? listQuery.error.message : null,
+        refresh,
     };
 }

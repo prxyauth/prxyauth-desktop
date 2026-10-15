@@ -1,3 +1,12 @@
+/**
+ * Session lifecycle context — browser state ONLY.
+ *
+ * Sessions server data lives in React Query (hooks/useSessionData);
+ * this context owns what genuinely is NOT server state: local browser
+ * processes tracked via main-process IPC events, their statuses/logs,
+ * and the launch/close/portal flows that drive them.
+ */
+
 import {
     createContext,
     useContext,
@@ -8,23 +17,13 @@ import {
     ReactNode,
 } from "react";
 import type {} from "@core/types/ipc-contract";
-import { Session } from "@core/types";
-import { sessionApi, ApiError } from "@core/api/client";
+import { sessionApi } from "@core/api/client";
 import { useAuth } from "@features/auth/hooks/useAuth";
 
 export type BrowserStatus = "launching" | "open" | "closed";
 
-interface SessionContextType {
-    sessions: Session[];
-    isLoading: boolean;
-    error: string | null;
-    refresh: () => Promise<void>;
-    logout: (sessionId: string) => Promise<boolean>;
-    deleteMultiple: (sessionIds: string[]) => Promise<boolean>;
-    loggingOutId: string | null;
-    verify: (sessionId: string) => Promise<boolean>;
-    verifyingId: string | null;
-    open: (sessionId: string) => Promise<boolean>;
+interface SessionLifecycleContextType {
+    /** Per-session busy flags (kept as ids for UI affordances). */
     isOpening: string | null;
     isClosing: string | null;
     transitioningSessions: Record<string, { status: string; logs: string[] }>;
@@ -33,19 +32,19 @@ interface SessionContextType {
     launchSessionBrowser: (sessionId: string) => Promise<void>;
     closeSessionBrowser: (sessionId: string) => Promise<void>;
     showSessionPortal: (sessionId: string) => Promise<void>;
+    /** Launch-flow error surface (lifecycle errors, not query errors). */
+    lifecycleError: string | null;
 }
 
-const SessionContext = createContext<SessionContextType | undefined>(undefined);
+const SessionLifecycleContext = createContext<SessionLifecycleContextType | undefined>(
+    undefined,
+);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
     const { isAuthenticated } = useAuth();
-    const [sessions, setSessions] = useState<Session[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [loggingOutId, setLoggingOutId] = useState<string | null>(null);
-    const [verifyingId, setVerifyingId] = useState<string | null>(null);
     const [isOpening, setIsOpening] = useState<string | null>(null);
     const [isClosing, setIsClosing] = useState<string | null>(null);
+    const [lifecycleError, setLifecycleError] = useState<string | null>(null);
     const [transitioningSessions, setTransitioningSessions] = useState<
         Record<string, { status: string; logs: string[] }>
     >({});
@@ -81,81 +80,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         [],
     );
 
-    const fetchSessions = useCallback(async () => {
-        try {
-            setIsLoading(true);
-            setError(null);
-            const data = await sessionApi.list();
-            setSessions(data);
-        } catch (err) {
-            const message = err instanceof ApiError ? err.message : "Failed to fetch sessions";
-            setError(message);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    const logout = useCallback(async (sessionId: string): Promise<boolean> => {
-        try {
-            setLoggingOutId(sessionId);
-            await sessionApi.logout(sessionId);
-            setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-            return true;
-        } catch (err) {
-            const message = err instanceof ApiError ? err.message : "Failed to logout";
-            setError(message);
-            return false;
-        } finally {
-            setLoggingOutId(null);
-        }
-    }, []);
-
-    const deleteMultiple = useCallback(async (sessionIds: string[]): Promise<boolean> => {
-        try {
-            setIsLoading(true);
-            await sessionApi.deleteMultiple(sessionIds);
-            setSessions((prev) => prev.filter((s) => !sessionIds.includes(s.id)));
-            return true;
-        } catch (err) {
-            const message = err instanceof ApiError ? err.message : "Failed to delete sessions";
-            setError(message);
-            return false;
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    const verify = useCallback(async (sessionId: string): Promise<boolean> => {
-        try {
-            setVerifyingId(sessionId);
-            const result = await sessionApi.verify(sessionId);
-            setSessions((prev) =>
-                prev.map((s) => (s.id === sessionId ? { ...s, status: result.status as any } : s)),
-            );
-            return result.success;
-        } catch (err) {
-            const message = err instanceof ApiError ? err.message : "Failed to verify session";
-            setError(message);
-            return false;
-        } finally {
-            setVerifyingId(null);
-        }
-    }, []);
-
-    const open = useCallback(async (sessionId: string): Promise<boolean> => {
-        try {
-            setIsOpening(sessionId);
-            const result = await sessionApi.open(sessionId);
-            return result.success;
-        } catch (err) {
-            const message = err instanceof ApiError ? err.message : "Failed to open session";
-            setError(message);
-            return false;
-        } finally {
-            setIsOpening(null);
-        }
-    }, []);
-
     const launchSessionBrowser = useCallback(
         async (sessionId: string) => {
             // Optimistic UI update — mark as launching
@@ -164,7 +88,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
             try {
                 setIsOpening(sessionId);
-                setError(null);
+                setLifecycleError(null);
 
                 setSessionLog(
                     sessionId,
@@ -182,6 +106,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
                     localStorage.getItem("prx_frontend_url") ||
                     import.meta.env.VITE_FRONTEND_URL ||
                     "http://localhost:3000";
+
                 const result = await window.prxApi.playwright.launchLocal(
                     sessionId,
                     storageState,
@@ -209,7 +134,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
                 setSessionLog(sessionId, null);
 
                 const message = err instanceof Error ? err.message : "Failed to launch browser";
-                setError(message);
+                setLifecycleError(message);
                 throw err;
             } finally {
                 setIsOpening(null);
@@ -243,7 +168,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
                 setSessionLog(sessionId, null);
 
                 const message = err instanceof Error ? err.message : "Failed to close browser";
-                setError(message);
+                setLifecycleError(message);
             } finally {
                 setIsClosing(null);
             }
@@ -254,7 +179,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const showSessionPortal = useCallback(
         async (sessionId: string) => {
             try {
-                const session = sessions.find((s) => s.id === sessionId);
+                const session = await sessionApi.get(sessionId);
                 if (!session) throw new Error("Session not found");
 
                 const frontendUrl =
@@ -275,10 +200,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
                 }
             } catch (err) {
                 const message = err instanceof Error ? err.message : "Failed to show portal";
-                setError(message);
+                setLifecycleError(message);
             }
         },
-        [sessions],
+        [],
     );
 
     useEffect(() => {
@@ -348,18 +273,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             }
         };
 
-        let heartbeatInterval: any = null;
+        let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
         if (isAuthenticated) {
-            fetchSessions();
-            syncBrowsers();
+            void syncBrowsers();
 
             // Reconcile state every 5 seconds
-            heartbeatInterval = setInterval(syncBrowsers, 5000);
+            heartbeatInterval = setInterval(() => void syncBrowsers(), 5000);
         } else {
-            // Clear sessions when logged out
-            setSessions([]);
-            setIsLoading(false);
+            setBrowserStatuses({});
         }
 
         return () => {
@@ -367,19 +289,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             statusCleanup();
             if (heartbeatInterval) clearInterval(heartbeatInterval);
         };
-    }, [isAuthenticated, fetchSessions, setSessionLog]);
+    }, [isAuthenticated, setSessionLog]);
 
-    const value: SessionContextType = {
-        sessions,
-        isLoading,
-        error,
-        refresh: fetchSessions,
-        logout,
-        deleteMultiple,
-        loggingOutId,
-        verify,
-        verifyingId,
-        open,
+    const value: SessionLifecycleContextType = {
         isOpening,
         isClosing,
         transitioningSessions,
@@ -388,13 +300,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         launchSessionBrowser,
         closeSessionBrowser,
         showSessionPortal,
+        lifecycleError,
     };
 
-    return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+    return (
+        <SessionLifecycleContext.Provider value={value}>
+            {children}
+        </SessionLifecycleContext.Provider>
+    );
 }
 
-export function useSessionContext(): SessionContextType {
-    const context = useContext(SessionContext);
+export function useSessionContext(): SessionLifecycleContextType {
+    const context = useContext(SessionLifecycleContext);
     if (context === undefined) {
         throw new Error("useSessionContext must be used within a SessionProvider");
     }

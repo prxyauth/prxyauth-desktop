@@ -1,77 +1,79 @@
-import { useState, useEffect, useCallback } from "react";
+/**
+ * useNotificationSettings — notification config on React Query.
+ * Public contract unchanged from the hand-rolled version (testMessage
+ * stays local: it is UI feedback about a one-shot action, not server
+ * state).
+ */
+
+import { useCallback, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { notificationApi, ApiError } from "@core/api/client";
-import { NotificationSettings, SaveNotificationRequest } from "@core/types";
+import { SaveNotificationRequest } from "@core/types";
+
+export const notificationKeys = {
+    all: ["notification-settings"] as const,
+    detail: () => [...notificationKeys.all, "detail"] as const,
+};
 
 export function useNotificationSettings() {
-    const [settings, setSettings] = useState<NotificationSettings | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [isSaving, setIsSaving] = useState(false);
-    const [isTesting, setIsTesting] = useState(false);
+    const client = useQueryClient();
     const [testMessage, setTestMessage] = useState<string | null>(null);
 
+    const settingsQuery = useQuery({
+        queryKey: notificationKeys.detail(),
+        queryFn: () => notificationApi.getSettings(),
+        enabled:
+            typeof localStorage !== "undefined" && Boolean(localStorage.getItem("prx_token")),
+    });
+
+    const saveMutation = useMutation({
+        mutationFn: (data: SaveNotificationRequest) => notificationApi.saveSettings(data),
+        onSuccess: () => client.invalidateQueries({ queryKey: notificationKeys.all }),
+    });
+
+    const testMutation = useMutation({
+        mutationFn: (data: SaveNotificationRequest) => notificationApi.testSettings(data),
+    });
+
     const fetchSettings = useCallback(async () => {
-        try {
-            setIsLoading(true);
-            setError(null);
-            const data = await notificationApi.getSettings();
-            setSettings(data);
-        } catch (err) {
-            const message =
-                err instanceof ApiError ? err.message : "Failed to fetch notification settings";
-            setError(message);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
+        await settingsQuery.refetch();
+    }, [settingsQuery]);
 
-    useEffect(() => {
-        // Only fetch if token exists
-        if (localStorage.getItem("prx_token")) {
-            fetchSettings();
-        }
-    }, [fetchSettings]);
+    const save = useCallback(
+        async (data: SaveNotificationRequest) => {
+            try {
+                await saveMutation.mutateAsync(data);
+                return true;
+            } catch {
+                return false;
+            }
+        },
+        [saveMutation],
+    );
 
-    const save = async (data: SaveNotificationRequest) => {
-        try {
-            setIsSaving(true);
-            setError(null);
-            await notificationApi.saveSettings(data);
-            await fetchSettings();
-            return true;
-        } catch (err) {
-            const message = err instanceof ApiError ? err.message : "Failed to save settings";
-            setError(message);
-            return false;
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const test = async (data: SaveNotificationRequest) => {
-        try {
-            setIsTesting(true);
-            setError(null);
+    const test = useCallback(
+        async (data: SaveNotificationRequest) => {
             setTestMessage(null);
-            const result = await notificationApi.testSettings(data);
-            setTestMessage(result.message);
-            return true;
-        } catch (err) {
-            const message =
-                err instanceof ApiError ? err.message : "Failed to send test notification";
-            setError(message);
-            return false;
-        } finally {
-            setIsTesting(false);
-        }
-    };
+            try {
+                const result = await testMutation.mutateAsync(data);
+                setTestMessage(result.message);
+                return true;
+            } catch (err) {
+                const message =
+                    err instanceof ApiError ? err.message : "Failed to send test notification";
+                setTestMessage(message);
+                return false;
+            }
+        },
+        [testMutation],
+    );
 
     return {
-        settings,
-        isLoading,
-        error,
-        isSaving,
-        isTesting,
+        settings: settingsQuery.data ?? null,
+        isLoading: settingsQuery.isLoading,
+        error: settingsQuery.error instanceof Error ? settingsQuery.error.message : null,
+        isSaving: saveMutation.isPending,
+        isTesting: testMutation.isPending,
         testMessage,
         save,
         test,

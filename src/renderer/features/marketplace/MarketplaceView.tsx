@@ -2,8 +2,10 @@
  * MarketplaceView - Infrastructure Marketplace for Electron
  */
 
-import { billingApi } from "@core/api/client";
-import { MarketplaceProvider } from "@core/types";
+import {
+    useMarketplaceProviders,
+    useCheckout,
+} from "@features/billing/hooks/useBilling";
 import { cn } from "@core/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -22,7 +24,7 @@ import {
     Star,
     type LucideIcon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ProvisioningModal } from "../../shared/components/ProvisioningModal";
 import { useSubscriptions } from "../subscriptions/useSubscriptions";
 import { MarketplaceLoginForm } from "./MarketplaceLoginForm";
@@ -46,31 +48,18 @@ interface MarketplaceViewProps {
 
 export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
     const { subscriptions, refresh: fetchLicenses } = useSubscriptions();
+    const checkoutMutation = useCheckout();
     const [isPurchasing, setIsPurchasing] = useState<string | null>(null);
     const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
     const [showConnect, setShowConnect] = useState(false);
     const [showProvisioning, setShowProvisioning] = useState(false);
 
-    const [providers, setProviders] = useState<MarketplaceProvider[]>([]);
-    const [providersLoading, setProvidersLoading] = useState(true);
-    const [providersError, setProvidersError] = useState<string | null>(null);
-
-    useEffect(() => {
-        const fetchProviders = async () => {
-            try {
-                setProvidersLoading(true);
-                setProvidersError(null);
-                const data = await billingApi.listMarketplaceProviders();
-                setProviders(data);
-            } catch (err) {
-                setProvidersError(err instanceof Error ? err.message : "Failed to load providers");
-                console.error("Error fetching marketplace providers:", err);
-            } finally {
-                setProvidersLoading(false);
-            }
-        };
-        fetchProviders();
-    }, []);
+    // Marketplace catalog on React Query — no fetch effect to own.
+    const {
+        data: providers = [],
+        isLoading: providersLoading,
+        error: providersError,
+    } = useMarketplaceProviders();
 
     const getIcon = (iconName: string): LucideIcon => {
         return ICON_MAP[iconName] || DEFAULT_ICON;
@@ -80,7 +69,7 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
         try {
             setIsPurchasing(p);
 
-            const response = await billingApi.checkout({
+            const response = await checkoutMutation.mutateAsync({
                 provider: p,
                 durationMonths: 1,
                 paymentMethod: "TRON", // Always use TRON by default
@@ -287,7 +276,7 @@ export function MarketplaceView({ onNavigateToPayment }: MarketplaceViewProps) {
                             className="lg:col-span-3 text-center py-20"
                         >
                             <p className="text-red-400 text-sm font-medium mb-4">
-                                {providersError}
+                                {providersError instanceof Error ? providersError.message : String(providersError)}
                             </p>
                             <button
                                 onClick={() => window.location.reload()}

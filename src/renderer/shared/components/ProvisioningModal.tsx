@@ -1,4 +1,4 @@
-import { billingApi } from "@core/api/client";
+import { useProvisioning } from "@features/billing/hooks/useBilling";
 import { ProvisioningData } from "@core/types";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -42,34 +42,32 @@ export function ProvisioningModal({
         return () => setMounted(false);
     }, []);
 
-    // Start the build whenever the modal opens
+    // Provisioning data comes from React Query — fetch lifecycle, retry,
+    // and caching are owned by the billing slice hook.
+    const provisioningQuery = useProvisioning(isOpen ? providerId : null);
+
     useEffect(() => {
-        if (isOpen && providerId) {
-            startBuild();
-        }
-        // Reset when closed
         if (!isOpen) {
-            setData(null);
             setBuildState("idle");
             setErrorMsg(null);
+            return;
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen, providerId]);
-
-    const startBuild = async () => {
-        try {
+        if (provisioningQuery.isFetching) {
             setBuildState("building");
             setErrorMsg(null);
-            const result = await billingApi.getProvisioningData(providerId);
-            setData(result);
-            setBuildState("done");
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : "Failed to build frontend";
+        } else if (provisioningQuery.isError) {
+            const msg =
+                provisioningQuery.error instanceof Error
+                    ? provisioningQuery.error.message
+                    : "Failed to build frontend";
             setErrorMsg(msg);
             setBuildState("error");
-            console.error("Provisioning build failed", err);
+            console.error("Provisioning build failed", provisioningQuery.error);
+        } else if (provisioningQuery.isSuccess) {
+            setData(provisioningQuery.data);
+            setBuildState("done");
         }
-    };
+    }, [isOpen, provisioningQuery.isFetching, provisioningQuery.isError, provisioningQuery.isSuccess]);
 
     const copyToClipboard = (text: string, id: string) => {
         navigator.clipboard.writeText(text);
@@ -128,7 +126,7 @@ export function ProvisioningModal({
                                 state={buildState}
                                 cached={data?.cached}
                                 errorMsg={errorMsg}
-                                onRetry={startBuild}
+                                onRetry={() => void provisioningQuery.refetch()}
                                 downloadUrl={data?.downloadUrl}
                                 providerName={providerName}
                             />
