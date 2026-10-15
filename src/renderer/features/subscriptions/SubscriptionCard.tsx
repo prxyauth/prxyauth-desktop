@@ -16,6 +16,7 @@ import {
     Github,
     Mail,
 } from "lucide-react";
+import { formatDate } from "@shared/utils/date";
 
 interface SubscriptionCardProps {
     license: ProviderLicense;
@@ -57,14 +58,6 @@ function getDaysRemaining(expiresAt: string): number {
     const expiry = new Date(expiresAt);
     const diff = expiry.getTime() - now.getTime();
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
-}
-
-function formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-    });
 }
 
 export function SubscriptionCard({ license, index = 0 }: SubscriptionCardProps) {
