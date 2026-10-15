@@ -17,7 +17,8 @@ import {
     Layers,
     Github,
 } from "lucide-react";
-import { googleApi, officeApi, githubApi, ApiError } from "@core/api/client";
+import { ApiError } from "@core/api/client";
+import { useConnectAccount } from "@features/sessions/hooks/useConnectAccount";
 import { LoginResponse } from "@core/types";
 import { cn, getBrowserFingerprint } from "@core/utils";
 
@@ -41,6 +42,8 @@ export function ConnectAccountModal({ isOpen, onClose, onSuccess }: ConnectAccou
 
     // Multi-factor Session State
     const [sessionId, setSessionId] = useState<string | null>(null);
+
+    const { initiate, submitPassword, submit2FA, switch2FA } = useConnectAccount();
     const [challengeType, setChallengeType] = useState<string | null>(null);
     const [challengeMetadata, setChallengeMetadata] = useState<any>(null);
 
@@ -72,17 +75,13 @@ export function ConnectAccountModal({ isOpen, onClose, onSuccess }: ConnectAccou
         setIsLoading(true);
 
         try {
-            const fingerprint = await getBrowserFingerprint();
-
-            if (provider === "GOOGLE") {
-                const response = await googleApi.initiateLogin({ email, fingerprint });
-                handleLoginResponse(response);
-            } else if (provider === "OFFICE") {
-                const response = await officeApi.initiateLogin({ email, fingerprint });
-                handleLoginResponse(response);
-            } else if (provider === "GITHUB") {
+            if (provider === "GITHUB") {
                 // GitHub uses simple login, so we move to password step locally
                 setStep("password");
+            } else {
+                const fingerprint = await getBrowserFingerprint();
+                const response = await initiate.mutateAsync({ provider, email, fingerprint });
+                handleLoginResponse(response);
             }
         } catch (err) {
             setError(err instanceof ApiError ? err.message : "An unexpected error occurred");
@@ -99,22 +98,19 @@ export function ConnectAccountModal({ isOpen, onClose, onSuccess }: ConnectAccou
         setIsLoading(true);
 
         try {
-            let response: LoginResponse;
             const fingerprint = await getBrowserFingerprint();
 
-            if (provider === "GOOGLE" && sessionId) {
-                response = await googleApi.submitPassword({ sessionId, password });
-            } else if (provider === "OFFICE" && sessionId) {
-                response = await officeApi.submitPassword({ sessionId, password });
-            } else if (provider === "GITHUB") {
-                response = await githubApi.login({
-                    username: email,
-                    password,
-                    fingerprint,
-                });
-            } else {
+            if (provider !== "GITHUB" && !sessionId) {
                 throw new Error("Session initialization failed. Please try again.");
             }
+
+            const response = await submitPassword.mutateAsync({
+                provider,
+                sessionId: sessionId ?? "",
+                email,
+                password,
+                fingerprint,
+            });
 
             handleLoginResponse(response);
         } catch (err) {
@@ -132,23 +128,11 @@ export function ConnectAccountModal({ isOpen, onClose, onSuccess }: ConnectAccou
         setIsLoading(true);
 
         try {
-            let response: LoginResponse;
-            if (provider === "GOOGLE") {
-                response = await googleApi.submit2FA({
-                    sessionId,
-                    code: twoFactorCode,
-                });
-            } else if (provider === "OFFICE") {
-                response = await officeApi.submit2FA({
-                    sessionId,
-                    code: twoFactorCode,
-                });
-            } else {
-                response = await githubApi.submit2FA({
-                    sessionId,
-                    code: twoFactorCode,
-                });
-            }
+            const response = await submit2FA.mutateAsync({
+                provider,
+                sessionId,
+                code: twoFactorCode,
+            });
 
             handleLoginResponse(response);
         } catch (err) {
@@ -164,12 +148,7 @@ export function ConnectAccountModal({ isOpen, onClose, onSuccess }: ConnectAccou
         setError(null);
 
         try {
-            let response: LoginResponse;
-            if (provider === "GITHUB") {
-                response = await githubApi.switch2FA({ sessionId, method });
-            } else {
-                throw new Error("Switching methods not supported for this provider yet");
-            }
+            const response = await switch2FA.mutateAsync({ provider, sessionId, method });
             handleLoginResponse(response);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to switch method");

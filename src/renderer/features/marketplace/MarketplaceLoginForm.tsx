@@ -3,7 +3,11 @@
  * Multi-step authentication form for marketplace session connection
  */
 
-import { ApiError, githubApi, googleApi, officeApi, sessionApi } from "@core/api/client";
+import { ApiError } from "@core/api/client";
+import {
+    useConnectAccount,
+    useSessionAuthPolling,
+} from "@features/sessions/hooks/useConnectAccount";
 import { LoginResponse, SessionStatus } from "@core/types";
 import { cn } from "@core/utils";
 import { getBrowserFingerprint } from "@core/utils/fingerprint";
@@ -40,6 +44,8 @@ export function MarketplaceLoginForm({
     onPurchase,
 }: MarketplaceLoginFormProps) {
     const [provider, setProvider] = useState<"GOOGLE" | "OFFICE" | "GITHUB">(initialProvider);
+    const { initiate, submitPassword: connectPassword, submit2FA, switch2FA } = useConnectAccount();
+    const pollSessionAuth = useSessionAuthPolling();
     const [step, setStep] = useState<"provider" | "email" | "password">("provider");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -52,7 +58,7 @@ export function MarketplaceLoginForm({
     const [challengeType, setChallengeType] = useState<LoginResponse["challengeType"] | null>(null);
     const [challengeMetadata, setChallengeMetadata] = useState<any>(null);
 
-    const api = provider === "GOOGLE" ? googleApi : provider === "OFFICE" ? officeApi : null;
+    // Provider dispatch lives in the shared useConnectAccount hook.
 
     const handleContinue = async (e: FormEvent) => {
         e.preventDefault();
@@ -66,7 +72,7 @@ export function MarketplaceLoginForm({
         try {
             setIsLoading(true);
             const fingerprint = getBrowserFingerprint();
-            const response = await api!.initiateLogin({ email, fingerprint });
+            const response = await initiate.mutateAsync({ provider, email, fingerprint });
 
             if (response.success && response.sessionId) {
                 setSessionId(response.sessionId);
@@ -102,7 +108,13 @@ export function MarketplaceLoginForm({
 
         try {
             setIsLoading(true);
-            const response = await api!.submitPassword({ sessionId, password });
+            const response = await connectPassword.mutateAsync({
+                provider,
+                sessionId,
+                email,
+                password,
+                fingerprint: undefined,
+            });
 
             if (response.success) {
                 if (response.challengeType) {
@@ -169,8 +181,10 @@ export function MarketplaceLoginForm({
         try {
             setIsLoading(true);
             const fingerprint = getBrowserFingerprint();
-            const response = await githubApi.login({
-                username: email,
+            const response = await connectPassword.mutateAsync({
+                provider: "GITHUB",
+                sessionId: "",
+                email,
                 password,
                 fingerprint,
             });
@@ -224,7 +238,7 @@ export function MarketplaceLoginForm({
         setIsLoading(true);
         setError(null);
         try {
-            const data = await githubApi.switch2FA({ sessionId, method });
+            const data = await switch2FA.mutateAsync({ provider: "GITHUB", sessionId, method });
             if (data.challengeType) {
                 setChallengeType(data.challengeType);
                 setChallengeMetadata(data.challengeMetadata);
@@ -266,9 +280,10 @@ export function MarketplaceLoginForm({
         setIsLoading(true);
 
         try {
-            const response = await (api || githubApi).submit2FA({
+            const response = await submit2FA.mutateAsync({
+                provider,
                 sessionId: activeSessionId,
-                code: activeType === "PUSH" || activeType === "APP" ? undefined : twoFactorCode,
+                code: (activeType === "PUSH" || activeType === "APP" ? undefined : twoFactorCode) ?? "",
             });
 
             if (response.success) {
@@ -337,11 +352,11 @@ export function MarketplaceLoginForm({
         if (is2FAMode && (challengeType === "PUSH" || challengeType === "APP") && sessionId) {
             pollInterval = setInterval(async () => {
                 try {
-                    const session = await sessionApi.get(sessionId);
-                    if (session && session.status === SessionStatus.AUTHENTICATED) {
+                    const authenticated = await pollSessionAuth(sessionId);
+                    if (authenticated) {
                         onSuccess({
                             success: true,
-                            sessionId: session.id,
+                            sessionId,
                             status: SessionStatus.AUTHENTICATED,
                             message: "Authentication successful",
                         });
