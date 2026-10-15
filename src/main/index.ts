@@ -994,10 +994,14 @@ app.on("window-all-closed", async () => {
     }
 });
 
-// Handle external links
-app.on("web-contents-created", (event, contents) => {
+// Handle external links — http/https only. Forwarding arbitrary schemes
+// (file://, chrome://, custom protocol handlers) to the OS is a
+// well-known Electron escape hatch (security checklist item).
+app.on("web-contents-created", (_event, contents) => {
     contents.setWindowOpenHandler(({ url }) => {
-        shell.openExternal(url);
+        if (/^https?:/i.test(url)) {
+            shell.openExternal(url);
+        }
         return { action: "deny" };
     });
 });

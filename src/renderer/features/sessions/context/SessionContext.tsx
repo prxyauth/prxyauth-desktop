@@ -5,7 +5,6 @@ import {
     useEffect,
     useCallback,
     useMemo,
-    useRef,
     ReactNode,
 } from "react";
 import { Session } from "@core/types";

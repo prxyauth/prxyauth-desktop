@@ -26,6 +26,7 @@ import {
 import { useEffect, useState } from "react";
 import { useApiKeys } from "./hooks/useApiKeys";
 import { useNotificationSettings } from "./hooks/useNotificationSettings";
+import { useAuth } from "../auth/context/AuthContext";
 
 interface SettingsViewProps {
     initialTab?: string;
@@ -37,7 +38,8 @@ export function SettingsView({ initialTab }: SettingsViewProps) {
         error: notificationError,
         save: saveNotifications,
         test: testNotifications,
-    } = useNotificationSettings();
+} = useNotificationSettings();
+    const { logout } = useAuth();
 
     // Form states
 
@@ -717,8 +719,9 @@ export function SettingsView({ initialTab }: SettingsViewProps) {
                                                         setPwNew("");
                                                         setPwConfirm("");
                                                         setTimeout(() => {
-                                                            localStorage.removeItem("auth_token");
-                                                            localStorage.removeItem("auth_user");
+                                                            // Storage keys are owned by AuthContext —
+                                                            // logout() clears the real keys (prx_token).
+                                                            logout();
                                                             window.location.reload();
                                                         }, 2000);
                                                     } else {
@@ -800,8 +803,9 @@ export function SettingsView({ initialTab }: SettingsViewProps) {
                                             setPwNew("");
                                             setPwConfirm("");
                                             setTimeout(() => {
-                                                localStorage.removeItem("auth_token");
-                                                localStorage.removeItem("auth_user");
+                                                // Storage keys are owned by AuthContext —
+                                                // logout() clears the real keys (prx_token).
+                                                logout();
                                                 window.location.reload();
                                             }, 2000);
                                         } else {
