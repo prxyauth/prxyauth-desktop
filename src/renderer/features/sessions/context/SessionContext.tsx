@@ -7,6 +7,7 @@ import {
     useMemo,
     ReactNode,
 } from "react";
+import type {} from "@core/types/ipc-contract";
 import { Session } from "@core/types";
 import { sessionApi, ApiError } from "@core/api/client";
 import { useAuth } from "@features/auth/hooks/useAuth";
@@ -181,7 +182,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
                     localStorage.getItem("prx_frontend_url") ||
                     import.meta.env.VITE_FRONTEND_URL ||
                     "http://localhost:3000";
-                const result = await (window as any).prxApi.playwright.launchLocal(
+                const result = await window.prxApi.playwright.launchLocal(
                     sessionId,
                     storageState,
                     session.proxy,
@@ -229,7 +230,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
             try {
                 setIsClosing(sessionId);
-                const result = await (window as any).prxApi.playwright.closeLocal(sessionId);
+                const result = await window.prxApi.playwright.closeLocal(sessionId);
                 if (!result.success) {
                     throw new Error(result.error || "Failed to close browser");
                 }
@@ -260,7 +261,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
                     localStorage.getItem("prx_frontend_url") ||
                     import.meta.env.VITE_FRONTEND_URL ||
                     "http://localhost:3000";
-                const result = await (window as any).prxApi.playwright.showPortal(
+                const result = await window.prxApi.playwright.showPortal(
                     sessionId,
                     null,
                     session.proxy,
@@ -282,7 +283,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         // Setup listener for browser closed events from main process (legacy)
-        const listenerCleanup = (window as any).prxApi.playwright.onBrowserClosed(
+        const listenerCleanup = window.prxApi.playwright.onBrowserClosed(
             (sessionId: string) => {
                 console.log(`[Context] Browser closed notification for: ${sessionId}`);
                 setBrowserStatuses((prev) => {
@@ -295,7 +296,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         );
 
         // Setup listener for browser status change events (primary)
-        const statusCleanup = (window as any).prxApi.playwright.onBrowserStatusChanged(
+        const statusCleanup = window.prxApi.playwright.onBrowserStatusChanged(
             (data: { sessionId: string; status: string }) => {
                 console.log(`[Context] Browser status changed: ${data.sessionId} → ${data.status}`);
                 if (data.status === "closed") {
@@ -316,7 +317,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
         const syncBrowsers = async () => {
             try {
-                const result = await (window as any).prxApi.playwright.listConnections();
+                const result = await window.prxApi.playwright.listConnections();
                 if (result.success) {
                     const serverSessions = new Set<string>(result.sessions || []);
                     const serverStatuses: Record<string, string> = result.statuses || {};

@@ -3,10 +3,12 @@
  * Mirrors backend DTOs for type safety across the application
  */
 
+// Mirrors the backend Prisma enum (be-prxyauth prisma/schema.prisma).
+// GOLOGIN/BROWSERLESS were retired with the CPA cut — the union must
+// track the wire, nothing else.
 export enum BrowserMode {
     PLAYWRIGHT = "PLAYWRIGHT",
-    GOLOGIN = "GOLOGIN",
-    BROWSERLESS = "BROWSERLESS",
+    SELFHOSTED = "SELFHOSTED",
 }
 
 export enum PaymentMethod {

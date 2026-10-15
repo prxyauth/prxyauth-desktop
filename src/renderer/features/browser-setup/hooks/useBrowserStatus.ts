@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
+import type {} from "@core/types/ipc-contract";
 
-export interface BrowserStatus {
-    isInstalled: boolean;
-    isDownloading: boolean;
-    progress: { percent: number; message: string };
+export type BrowserStatus = IpcBrowserStatus;
+
+/** Progress subset consumed by the UI (message + percent). */
+export interface BrowserProgress {
+    percent: number;
+    message: string;
 }
 
 export function useBrowserStatus() {
     const [status, setStatus] = useState<BrowserStatus | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    const api = (window as any).prxApi.browser;
+    const api = window.prxApi.browser;
 
     const checkStatus = async () => {
         try {
@@ -41,12 +44,12 @@ export function useBrowserStatus() {
                         ? {
                               ...prev,
                               isDownloading: true,
-                              progress: { percent: 0, message: "Starting..." },
+                              progress: { percent: 0, message: "Starting...", components: {} },
                           }
                         : null,
                 );
             }),
-            api.onInstallProgress((progress: { percent: number; message: string }) => {
+            api.onInstallProgress((progress) => {
                 setStatus((prev) => (prev ? { ...prev, isDownloading: true, progress } : null));
             }),
             api.onInstallSuccess(() => {

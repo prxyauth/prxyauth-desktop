@@ -54,27 +54,8 @@ export class BrowserManager {
     public isInstalled(): boolean {
         try {
             process.env.PLAYWRIGHT_BROWSERS_PATH = this.browsersPath;
-            const { chromium } = require("playwright-core");
-
-            const standardPath = chromium.executablePath();
-            if (fs.existsSync(standardPath)) return true;
-
-            const flatPath = standardPath.replace(/[\\/]playwright[\\/]/, path.sep);
-            if (fs.existsSync(flatPath)) return true;
-
-            const revisionMatch = standardPath.match(/chromium-(\d+)/);
-            if (revisionMatch) {
-                const revPath = path.join(
-                    this.browsersPath,
-                    `chromium-${revisionMatch[1]}`,
-                    "chrome-win64",
-                    "chrome.exe",
-                );
-                if (fs.existsSync(revPath)) return true;
-            }
-
-            return false;
-        } catch (e) {
+            return this.resolveExecutablePath() !== null;
+        } catch {
             return false;
         }
     }
@@ -126,6 +107,18 @@ export class BrowserManager {
     }
 
     public getExecutablePath(): string {
+        // Callers expect SOME path even when missing (launch then fails with
+        // a clear Playwright error) — preserve the old fallback.
+        return this.resolveExecutablePath() ?? this.defaultExecutablePath();
+    }
+
+    /**
+     * Single probe implementation shared by isInstalled() and
+     * getExecutablePath() — previously duplicated verbatim, which is how
+     * the two could (and did not yet, but would) drift apart.
+     * Returns null when no known layout contains a Chromium binary.
+     */
+    private resolveExecutablePath(): string | null {
         const { chromium } = require("playwright-core");
         const standardPath = chromium.executablePath();
         if (fs.existsSync(standardPath)) return standardPath;
@@ -144,6 +137,11 @@ export class BrowserManager {
             if (fs.existsSync(revPath)) return revPath;
         }
 
-        return standardPath;
+        return null;
+    }
+
+    private defaultExecutablePath(): string {
+        const { chromium } = require("playwright-core");
+        return chromium.executablePath();
     }
 }
