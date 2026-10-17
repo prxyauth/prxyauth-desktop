@@ -22,7 +22,11 @@ import {
     setConnection,
 } from "./browser-store";
 import { ensureProfileDir, isProfileEmpty } from "../node/profile-dirs";
-import { resolveChromeExecutable, type BrowserChoice } from "../node/chrome-launcher";
+import {
+    resolveChromeExecutableForProfile,
+    writeProfileMarker,
+    type BrowserChoice,
+} from "../node/chrome-launcher";
 import { getBrowserChoice } from "../node/node-agent";
 
 export interface LaunchLocalInput {
@@ -168,19 +172,20 @@ export async function launchLocal(input: LaunchLocalInput): Promise<{
 
         emitBrowserStatus(sessionId, "launching");
 
-        // Resolve the executable per the user's session-browser choice.
+        // Resolve the executable per the user's session-browser choice —
+        // profile-aware: a profile written by another channel (installed
+        // Chrome vs managed Chromium) must keep a same-or-newer binary or
+        // Chrome crashes at open (0x80000003).
         let browserChoice: BrowserChoice = "auto";
         try {
             browserChoice = getBrowserChoice();
         } catch {
             /* userData not ready yet — auto */
         }
-        const resolved = resolveChromeExecutable(browserChoice);
+        const profileDir = ensureProfileDir(session?.email || sessionId);
+        const resolved = resolveChromeExecutableForProfile(profileDir, browserChoice);
+        writeProfileMarker(profileDir, resolved);
         console.log(`[Main] session browser → ${resolved.kind} (${resolved.path})`);
-
-        // Persistent per-account profile — same dir the node agent uses.
-        const profileName = session?.email || sessionId;
-        const profileDir = ensureProfileDir(profileName);
         console.log(`[Main] profile dir: ${profileDir}`);
 
         // Prepare proxy (returns object with server, username, password).

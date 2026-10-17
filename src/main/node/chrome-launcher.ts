@@ -13,7 +13,7 @@
 
 import { ChildProcess, spawn } from "child_process";
 import net from "net";
-import { existsSync } from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 import path from "path";
 import log from "electron-log";
 import { BrowserManager } from "../browser-manager";
@@ -194,6 +194,93 @@ export function tryResolveChromeExecutable(choice: BrowserChoice): ResolvedBrows
 }
 
 /**
+ * Profile-writer marker: which binary last wrote this profile dir.
+ * Chrome profiles are FORWARD-migrating only — an older binary opening a
+ * newer profile crashes instantly (exit 0x80000003, e.g. managed Chromium
+ * 143 opening a Chrome-155-written profile). A profile must therefore keep
+ * being opened by the same-or-newer binary: we remember the writer and
+ * stick to its channel.
+ */
+const PROFILE_MARKER = ".prx-browser";
+
+interface ProfileMarker {
+    kind: "system" | "managed";
+    path: string;
+    writtenAt: string;
+}
+
+/** Record which binary wrote this profile (called at every launch). */
+export function writeProfileMarker(profileDir: string, resolved: ResolvedBrowser): void {
+    try {
+        const marker: ProfileMarker = {
+            kind: resolved.kind,
+            path: resolved.path,
+            writtenAt: new Date().toISOString(),
+        };
+        writeFileSync(path.join(profileDir, PROFILE_MARKER), JSON.stringify(marker), {
+            encoding: "utf-8",
+        });
+    } catch {
+        /* best-effort: the rules below degrade safely without it */
+    }
+}
+
+function readProfileMarker(profileDir: string): ProfileMarker | null {
+    try {
+        const raw = readFileSync(path.join(profileDir, PROFILE_MARKER), "utf-8");
+        const parsed = JSON.parse(raw) as ProfileMarker;
+        if (parsed.kind === "system" || parsed.kind === "managed") return parsed;
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+/** True when the dir holds no Chrome state yet (no Default/ subfolder). */
+function profileHasState(profileDir: string): boolean {
+    try {
+        return existsSync(path.join(profileDir, "Default"));
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Resolve the executable for a SPECIFIC profile dir.
+ *
+ * Rules (in order):
+ * 1. The profile's marker names its writer — keep that channel while the
+ *    binary exists (same-or-newer is the only safe direction).
+ * 2. Unmarked but non-empty profile: prefer installed Chrome — a real,
+ *    auto-updating Chrome can open any older profile, and is the likely
+ *    writer (node-agent default). The managed binary would crash on newer
+ *    stamps.
+ * 3. New/empty profile: the user's choice governs (auto → system default).
+ */
+export function resolveChromeExecutableForProfile(
+    profileDir: string,
+    choice: BrowserChoice = "auto",
+): ResolvedBrowser {
+    const { system, managed } = browserAvailability();
+
+    const marker = readProfileMarker(profileDir);
+    if (marker) {
+        if (marker.kind === "system" && system) return { path: system, kind: "system" };
+        if (marker.kind === "managed" && managed) return { path: managed, kind: "managed" };
+        // Writer binary is gone — fall through; rules below pick a survivor.
+        log.warn(
+            `[NodeAgent] profile writer (${marker.kind}) is no longer installed — resolving an alternative for ${profileDir}`,
+        );
+    }
+
+    if (profileHasState(profileDir) && system) {
+        return { path: system, kind: "system" };
+    }
+
+    return resolveChromeExecutable(choice);
+}
+
+/**
  * Launches Chrome for REMOTE automation WITHOUT holding a Playwright
  * connection (see file doc). Spawns with the debug port, waits for CDP
  * readiness, and returns the browser handle.
@@ -208,7 +295,11 @@ export async function launchChromeRemote(
     choice: BrowserChoice = "auto",
 ): Promise<RemoteBrowser> {
     const debugPort = await findAvailablePort();
-    const resolved = resolveChromeExecutable(choice);
+    // Profile-aware: a profile written by a different channel (e.g. by the
+    // installed Chrome while this resolves to managed Chromium) crashes at
+    // open when the binary is older than the profile stamp.
+    const resolved = resolveChromeExecutableForProfile(profileDir, choice);
+    writeProfileMarker(profileDir, resolved);
     const chromePath = resolved.path;
     const args = buildChromeArgs(debugPort, profileDir);
 
