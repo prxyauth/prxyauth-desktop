@@ -206,4 +206,20 @@ contextBridge.exposeInMainWorld("prxApi", {
             return () => ipcRenderer.removeListener("browser:install-failed", handler);
         },
     },
+    nodeRuntime: {
+        getInfo: (): Promise<
+            ApiResult<{
+                status: string;
+                pid?: number;
+                port: number;
+                lastExitCode?: number | null;
+                lastCrashAt?: string | null;
+                restartCount: number;
+            }>
+        > => ipcRenderer.invoke("node-runtime:get-info"),
+        isInstalled: (): Promise<ApiResult<{ status: string }>> =>
+            ipcRenderer.invoke("node-runtime:is-installed"),
+        start: (): Promise<ApiResult> => ipcRenderer.invoke("node-runtime:start"),
+        stop: (): Promise<ApiResult> => ipcRenderer.invoke("node-runtime:stop"),
+    },
 });
