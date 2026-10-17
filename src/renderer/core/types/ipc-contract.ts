@@ -108,6 +108,15 @@ declare global {
                 start: () => Promise<IpcApiResult>;
                 stop: () => Promise<IpcApiResult>;
             };
+            nodeProvisioning: {
+                status: () => Promise<IpcApiResult<{ provisioned: boolean }>>;
+                enable: (req: {
+                    backendUrl: string;
+                    token: string;
+                    nodeName?: string;
+                    existingNodeKey?: string;
+                }) => Promise<IpcApiResult>;
+            };
         };
     }
 }

@@ -19,6 +19,7 @@ import { initAutoUpdater } from "./auto-updater";
 import { BrowserManager } from "./browser-manager";
 import { registerPlaywrightIpc } from "./ipc/register-playwright";
 import { registerNodeRuntimeIpc } from "./ipc/register-node-runtime";
+import { registerNodeProvisioningIpc } from "./ipc/register-node-provisioning";
 import { getNodeRuntimeService } from "./services/node-runtime";
 import { allConnections } from "./services/browser-store";
 import { createWindow, getMainWindow, installWebContentsPolicies } from "./window";
@@ -29,6 +30,7 @@ app.whenReady().then(async () => {
     // Register the IPC surface once, before any browser session starts.
     registerPlaywrightIpc();
     registerNodeRuntimeIpc();
+    registerNodeProvisioningIpc();
 
     // Initialize auto-updater with window reference for progress display
     initAutoUpdater(win);

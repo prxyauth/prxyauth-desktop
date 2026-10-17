@@ -8,6 +8,7 @@
  */
 
 import { useNodeRuntime } from "./hooks/useNodeRuntime";
+import { useProvisioning } from "./hooks/useProvisioning";
 import { Cpu, Play, RefreshCw, Square } from "lucide-react";
 
 interface StatusPresentation {
@@ -59,6 +60,7 @@ function presentStatus(
 
 export function NodeRuntimeView() {
     const { info, installed, loading, busy, error, start, stop, refresh } = useNodeRuntime();
+    const prov = useProvisioning(() => void refresh());
 
     const p = presentStatus(info?.status ?? "stopped", info?.restartCount ?? 0, info?.lastCrashAt ?? null);
     const isRunning = info?.status === "running";
@@ -89,6 +91,42 @@ export function NodeRuntimeView() {
                 </div>
             ) : (
                 <>
+                    {/* Onboarding: not provisioned yet → one-click enable */}
+                    {prov.provisioned === false && (
+                        <section className="rounded-xl border border-primary/30 bg-primary/5 p-5 space-y-3">
+                            <p className="text-slate-100 font-medium">
+                                Enable this machine as your self-hosted node
+                            </p>
+                            <p className="text-sm text-slate-400">
+                                One click registers a node with your account, configures it, and
+                                starts the tunnel. No keys to copy, no files to edit.
+                            </p>
+                            <button
+                                onClick={() => void prov.enable()}
+                                disabled={prov.busy}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                            >
+                                <Play className="w-4 h-4" />
+                                {prov.busy ? "Enabling…" : "Enable Self-Hosted Node"}
+                            </button>
+                            {prov.failureKind === "license-required" && (
+                                <p className="text-sm text-amber-300">
+                                    Self-Hosted license required — purchase it in the Marketplace,
+                                    then come back here.
+                                </p>
+                            )}
+                            {prov.failureKind === "limit-reached" && (
+                                <p className="text-sm text-amber-300">
+                                    Node limit reached — revoke an existing node in the dashboard
+                                    first, then retry.
+                                </p>
+                            )}
+                            {prov.error && prov.failureKind === null && (
+                                <p className="text-sm text-rose-300">{prov.error}</p>
+                            )}
+                        </section>
+                    )}
+
                     <section className="rounded-xl border border-white/10 bg-white/5 p-5 space-y-4">
                         <div className="flex items-start justify-between gap-4">
                             <div className="flex items-center gap-3">

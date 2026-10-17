@@ -222,4 +222,14 @@ contextBridge.exposeInMainWorld("prxApi", {
         start: (): Promise<ApiResult> => ipcRenderer.invoke("node-runtime:start"),
         stop: (): Promise<ApiResult> => ipcRenderer.invoke("node-runtime:stop"),
     },
+    nodeProvisioning: {
+        status: (): Promise<ApiResult<{ provisioned: boolean }>> =>
+            ipcRenderer.invoke("node-provisioning:status"),
+        enable: (req: {
+            backendUrl: string;
+            token: string;
+            nodeName?: string;
+            existingNodeKey?: string;
+        }): Promise<ApiResult> => ipcRenderer.invoke("node-provisioning:enable", req),
+    },
 });
