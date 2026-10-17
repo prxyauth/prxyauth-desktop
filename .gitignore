@@ -33,3 +33,7 @@ tsc-output.txt
 
 # Vite temp files
 vite.config.mts.timestamp-*
+
+# Embedded node-runtime payload (172MB build artifact — build with
+# `pnpm build:node-payload`, never commit)
+node-runtime/

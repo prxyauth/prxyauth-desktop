@@ -11,6 +11,7 @@
         "build": "tsc --build tsconfig.main.json && vite build && electron-builder",
         "preview": "vite preview",
         "compile:main": "tsc --build tsconfig.main.json",
+        "build:node-payload": "node scripts/build-node-payload.mjs",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "electron:dev": "tsc --build tsconfig.main.json && concurrently \"vite --port 5180\" \"tsc --build tsconfig.main.json --watch\" \"wait-on http://localhost:5180 && electron .\"",
@@ -119,6 +120,16 @@
             {
                 "from": "assets",
                 "to": "assets"
+            },
+            {
+                "from": "node-runtime",
+                "to": "node-runtime",
+                "filter": [
+                    "**/*",
+                    "!**/*.md",
+                    "!**/README*",
+                    "!**/*.d.ts"
+                ]
             }
         ],
         "files": [

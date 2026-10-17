@@ -38,20 +38,28 @@ export interface NodeRuntimeInfo {
 
 /** Where the built node payload lives inside the packaged app. */
 function payloadDir(): string {
-    // dev: <repo>/node-runtime/ ; packaged: resources/node-runtime/
+    // dev: <desktop-repo>/node-runtime/ ; packaged: resources/node-runtime/
     const base = app.isPackaged
         ? process.resourcesPath
-        : path.resolve(app.getAppPath(), "..", "node-runtime");
+        : path.resolve(app.getAppPath(), "node-runtime");
     return path.join(base, "node-runtime");
 }
 
+/** The payload ships as bytenode bytecode — the loader is required. */
 function payloadEntry(): string {
-    return path.join(payloadDir(), "dist", "index.js");
+    return path.join(payloadDir(), "dist", "index.jsc");
+}
+
+function bytenodeLoader(): string {
+    // payload ships its own node_modules (bytenode + externals) so the
+    // bytecode can resolve them; same layout dev and packaged.
+    return path.join(payloadDir(), "node_modules", "bytenode", "lib", "index.js");
 }
 
 export function isNodeRuntimeInstalled(): boolean {
     try {
         accessSync(payloadEntry(), constants.R_OK);
+        accessSync(bytenodeLoader(), constants.R_OK);
         return true;
     } catch {
         return false;
@@ -120,11 +128,11 @@ export class NodeRuntimeService {
             HOST: "127.0.0.1",
         };
 
-        // The node reads its own .env (NODE_KEY, TUNNEL_URL, ADMIN_TOKEN...).
+        // The node reads its own .env (NODE_KEY, TUNNEL_URL, ENCRYPTION_KEY...).
         // dotenv in the child resolves relative to its cwd, so point cwd at
         // the data dir where the .env lives.
         const dataDir = path.dirname(this.envFile());
-        const args = [payloadEntry()];
+        const args = ["-r", bytenodeLoader(), payloadEntry()];
 
         try {
             this.child = spawn(process.execPath, args, {
