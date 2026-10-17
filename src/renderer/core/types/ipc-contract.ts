@@ -96,15 +96,14 @@ declare global {
             nodeRuntime: {
                 getInfo: () => Promise<
                     IpcApiResult<{
-                        status: string;
-                        pid?: number;
-                        port: number;
-                        lastExitCode?: number | null;
-                        lastCrashAt?: string | null;
-                        restartCount: number;
+                        state: string;
+                        lastCloseHint: string | null;
+                        activeSessions: number;
+                        totalSessions: number;
+                        reconnectCount: number;
                     }>
                 >;
-                isInstalled: () => Promise<IpcApiResult<{ status: string }>>;
+                isInstalled: () => Promise<IpcApiResult<{ state: string }>>;
                 start: () => Promise<IpcApiResult>;
                 stop: () => Promise<IpcApiResult>;
             };

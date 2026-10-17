@@ -11,7 +11,6 @@
         "build": "tsc --build tsconfig.main.json && vite build && electron-builder",
         "preview": "vite preview",
         "compile:main": "tsc --build tsconfig.main.json",
-        "build:node-payload": "node scripts/build-node-payload.mjs",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "electron:dev": "tsc --build tsconfig.main.json && concurrently \"vite --port 5180\" \"tsc --build tsconfig.main.json --watch\" \"wait-on http://localhost:5180 && electron .\"",
@@ -29,7 +28,8 @@
         "playwright-core": "^1.40.1",
         "proxy-chain": "^2.7.1",
         "qrcode.react": "^4.2.0",
-        "tailwind-merge": "^2.2.1"
+        "tailwind-merge": "^2.2.1",
+        "ws": "^8.22.0"
     },
     "devDependencies": {
         "@tailwindcss/postcss": "^4.0.0",
@@ -37,6 +37,7 @@
         "@types/node": "^20.19.27",
         "@types/react": "^18.2.48",
         "@types/react-dom": "^18.2.18",
+        "@types/ws": "^8.18.2",
         "@vitejs/plugin-react": "^4.2.1",
         "autoprefixer": "^10.4.20",
         "concurrently": "^8.2.2",
@@ -120,16 +121,6 @@
             {
                 "from": "assets",
                 "to": "assets"
-            },
-            {
-                "from": "node-runtime",
-                "to": "node-runtime",
-                "filter": [
-                    "**/*",
-                    "!**/*.md",
-                    "!**/README*",
-                    "!**/*.d.ts"
-                ]
             }
         ],
         "files": [

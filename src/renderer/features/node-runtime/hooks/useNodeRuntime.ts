@@ -1,23 +1,21 @@
 /**
- * Node runtime feature hook — polls the embedded node server's state
+ * Node agent feature hook — polls the embedded node agent's tunnel state
  * and exposes start/stop actions. The window.prxApi surface is defined
  * in core/types/ipc-contract.ts.
  */
 
 import { useCallback, useEffect, useState } from "react";
 
-export interface NodeRuntimeState {
-    status: string;
-    pid?: number;
-    port: number;
-    lastExitCode?: number | null;
-    lastCrashAt?: string | null;
-    restartCount: number;
+export interface NodeAgentStateInfo {
+    state: string;
+    lastCloseHint: string | null;
+    activeSessions: number;
+    totalSessions: number;
+    reconnectCount: number;
 }
 
 export interface NodeRuntimeHook {
-    info: NodeRuntimeState | null;
-    installed: boolean;
+    info: NodeAgentStateInfo | null;
     loading: boolean;
     busy: boolean;
     error: string | null;
@@ -29,8 +27,7 @@ export interface NodeRuntimeHook {
 const POLL_MS = 5_000;
 
 export function useNodeRuntime(): NodeRuntimeHook {
-    const [info, setInfo] = useState<NodeRuntimeState | null>(null);
-    const [installed, setInstalled] = useState<boolean>(true);
+    const [info, setInfo] = useState<NodeAgentStateInfo | null>(null);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -39,12 +36,8 @@ export function useNodeRuntime(): NodeRuntimeHook {
 
     const refresh = useCallback(async () => {
         try {
-            const [infoRes, installedRes] = await Promise.all([
-                api.getInfo(),
-                api.isInstalled(),
-            ]);
+            const infoRes = await api.getInfo();
             if (infoRes.data) setInfo(infoRes.data);
-            setInstalled(installedRes.data?.status !== "not-installed");
             setError(null);
         } catch (err) {
             setError(String(err));
@@ -87,5 +80,5 @@ export function useNodeRuntime(): NodeRuntimeHook {
         }
     }, [api, refresh]);
 
-    return { info, installed, loading, busy, error, refresh, start, stop };
+    return { info, loading, busy, error, refresh, start, stop };
 }

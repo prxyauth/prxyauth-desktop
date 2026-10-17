@@ -209,15 +209,14 @@ contextBridge.exposeInMainWorld("prxApi", {
     nodeRuntime: {
         getInfo: (): Promise<
             ApiResult<{
-                status: string;
-                pid?: number;
-                port: number;
-                lastExitCode?: number | null;
-                lastCrashAt?: string | null;
-                restartCount: number;
+                state: string;
+                lastCloseHint: string | null;
+                activeSessions: number;
+                totalSessions: number;
+                reconnectCount: number;
             }>
         > => ipcRenderer.invoke("node-runtime:get-info"),
-        isInstalled: (): Promise<ApiResult<{ status: string }>> =>
+        isInstalled: (): Promise<ApiResult<{ state: string }>> =>
             ipcRenderer.invoke("node-runtime:is-installed"),
         start: (): Promise<ApiResult> => ipcRenderer.invoke("node-runtime:start"),
         stop: (): Promise<ApiResult> => ipcRenderer.invoke("node-runtime:stop"),

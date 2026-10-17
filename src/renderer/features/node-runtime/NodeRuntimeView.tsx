@@ -1,10 +1,9 @@
 /**
  * NodeRuntimeView — the "Self-Hosted Node" section.
  *
- * Shows the embedded node server's lifecycle state in product language:
- * status dot + human sentence, tunnel close codes translated to actions
- * (4005 → subscription expired → renew), start/stop, diagnostics facts.
- * Deliberately NOT a log viewer — phase 3 adds the provisioning flow.
+ * Shows the embedded node agent's tunnel state in product language:
+ * status dot + human sentence, close-code hints translated to actions
+ * (4005 → subscription expired → renew), start/stop, session facts.
  */
 
 import { useNodeRuntime } from "./hooks/useNodeRuntime";
@@ -18,52 +17,67 @@ interface StatusPresentation {
 }
 
 function presentStatus(
-    status: string,
-    restartCount: number,
-    lastCrashAt: string | null,
+    state: string,
+    closeHint: string | null,
+    activeSessions: number,
 ): StatusPresentation {
-    switch (status) {
-        case "running":
+    switch (state) {
+        case "online":
             return {
                 dot: "bg-emerald-400",
-                headline: "Node running",
-                detail: "Tunnel connected — your self-hosted auth sessions run on this machine's Chrome.",
+                headline: "Node online",
+                detail:
+                    activeSessions > 0
+                        ? `Tunnel connected — serving ${activeSessions} session${activeSessions > 1 ? "s" : ""} on this machine's Chrome.`
+                        : "Tunnel connected — your self-hosted auth sessions run on this machine's Chrome.",
             };
-        case "starting":
+        case "connecting":
             return {
                 dot: "bg-amber-400 animate-pulse",
-                headline: "Node starting…",
-                detail: "Waiting for the server's health endpoint to answer.",
+                headline: "Connecting…",
+                detail: "Opening the tunnel to your prxyauth backend.",
+            };
+        case "reconnecting":
+            return {
+                dot: "bg-amber-400 animate-pulse",
+                headline: "Reconnecting…",
+                detail: "The tunnel dropped — retrying with backoff (1s → 30s).",
+            };
+        case "rejected":
+            return {
+                dot: "bg-rose-500",
+                headline: "Tunnel rejected",
+                detail:
+                    closeHint ||
+                    "The backend refused this node — re-provision it from the dashboard.",
+            };
+        case "provisioning-required":
+            return {
+                dot: "bg-slate-500",
+                headline: "Not set up",
+                detail: "Enable this machine as your self-hosted node below.",
             };
         case "stopped":
+        default:
             return {
                 dot: "bg-slate-500",
                 headline: "Node stopped",
                 detail: "Start the node to connect the tunnel and serve self-hosted sessions.",
             };
-        case "crashed":
-            return {
-                dot: "bg-rose-500",
-                headline: "Node crashed — restarting",
-                detail: restartCount
-                    ? `Auto-restart #${restartCount}${lastCrashAt ? ` at ${new Date(lastCrashAt).toLocaleTimeString()}` : ""}. Bounded backoff: 1s → 5s → 15s → 60s.`
-                    : "The node process exited unexpectedly. Auto-restart with bounded backoff engaged.",
-            };
-        default:
-            return {
-                dot: "bg-slate-500",
-                headline: "Node runtime not installed",
-                detail: "The embedded node payload is missing. Reinstall the app to restore it.",
-            };
     }
 }
 
 export function NodeRuntimeView() {
-    const { info, installed, loading, busy, error, start, stop, refresh } = useNodeRuntime();
+    const { info, loading, busy, error, start, stop, refresh } = useNodeRuntime();
     const prov = useProvisioning(() => void refresh());
 
-    const p = presentStatus(info?.status ?? "stopped", info?.restartCount ?? 0, info?.lastCrashAt ?? null);
-    const isRunning = info?.status === "running";
+    const p = presentStatus(
+        info?.state ?? "provisioning-required",
+        info?.lastCloseHint ?? null,
+        info?.activeSessions ?? 0,
+    );
+    const lifecycleActive =
+        info?.state === "online" || info?.state === "connecting" || info?.state === "reconnecting";
 
     return (
         <div className="p-6 max-w-3xl mx-auto space-y-6">
@@ -74,21 +88,14 @@ export function NodeRuntimeView() {
                 <div>
                     <h1 className="text-xl font-semibold text-slate-100">Self-Hosted Node</h1>
                     <p className="text-sm text-slate-400">
-                        The node server embedded in this app — your machine's Chrome serves your self-hosted auth sessions.
+                        Your machine's Chrome serves your self-hosted auth sessions — built into
+                        this app, no separate node software.
                     </p>
                 </div>
             </header>
 
             {loading ? (
                 <div className="text-slate-400 text-sm">Checking node state…</div>
-            ) : !installed ? (
-                <div className="rounded-xl border border-white/10 bg-white/5 p-5 space-y-2">
-                    <p className="text-slate-200 font-medium">Node runtime not installed</p>
-                    <p className="text-sm text-slate-400">
-                        The embedded node payload is missing from this installation. Reinstall the
-                        app to restore it.
-                    </p>
-                </div>
             ) : (
                 <>
                     {/* Onboarding: not provisioned yet → one-click enable */}
@@ -98,8 +105,8 @@ export function NodeRuntimeView() {
                                 Enable this machine as your self-hosted node
                             </p>
                             <p className="text-sm text-slate-400">
-                                One click registers a node with your account, configures it, and
-                                starts the tunnel. No keys to copy, no files to edit.
+                                One click registers a node with your account and connects the
+                                tunnel. No keys to copy, no files to edit.
                             </p>
                             <button
                                 onClick={() => void prov.enable()}
@@ -144,7 +151,7 @@ export function NodeRuntimeView() {
                                 >
                                     <RefreshCw className="w-4 h-4 text-slate-400" />
                                 </button>
-                                {isRunning ? (
+                                {lifecycleActive ? (
                                     <button
                                         onClick={() => void stop()}
                                         disabled={busy}
@@ -171,22 +178,19 @@ export function NodeRuntimeView() {
                                 {error}
                             </p>
                         )}
+
+                        {info?.lastCloseHint && info.state !== "rejected" && (
+                            <p className="text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
+                                {info.lastCloseHint}
+                            </p>
+                        )}
                     </section>
 
                     <section className="rounded-xl border border-white/10 bg-white/5 divide-y divide-white/5">
-                        <Row label="Status" value={info?.status ?? "—"} />
-                        <Row label="Port" value={info ? `127.0.0.1:${info.port}` : "—"} />
-                        <Row
-                            label="Process ID"
-                            value={info?.pid ? String(info.pid) : "not running"}
-                        />
-                        <Row
-                            label="Last exit code"
-                            value={
-                                info?.lastExitCode == null ? "—" : String(info.lastExitCode)
-                            }
-                        />
-                        <Row label="Auto-restarts" value={String(info?.restartCount ?? 0)} />
+                        <Row label="State" value={info?.state ?? "—"} />
+                        <Row label="Active sessions" value={String(info?.activeSessions ?? 0)} />
+                        <Row label="Sessions served" value={String(info?.totalSessions ?? 0)} />
+                        <Row label="Reconnect attempts" value={String(info?.reconnectCount ?? 0)} />
                     </section>
                 </>
             )}

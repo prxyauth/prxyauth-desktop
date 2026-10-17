@@ -1,36 +1,33 @@
 /**
  * Node provisioning service — the one-click self-hosted onboarding.
  *
- * Replaces the manual flow (dashboard shows NODE_KEY → user downloads a
- * second app → finds .env → pastes NODE_KEY + TUNNEL_URL) with: logged-in
- * user clicks "Enable Self-Hosted Node" → this service registers the node
- * against the backend with the session JWT, writes the embedded node's
- * .env, and starts the runtime.
+ * The renderer supplies its session token + the backend URL it already
+ * uses (both live in renderer localStorage); the main process registers
+ * the node against the backend (one-time nodeKey mint), persists the
+ * key to <userData>/node-agent.json, and starts the agent.
  *
  * Security posture:
- * - The nodeKey is a one-time secret shown once by the backend; we write
- *   it to the .env and never expose it to the renderer. Renderer only
- *   ever sees provisioning status, never key material.
- * - ENCRYPTION_KEY is generated locally with crypto.randomBytes(32) and
- *   never leaves the machine.
- * - The .env lives in the app's userData/node-runtime/ directory.
+ * - The nodeKey is a one-time secret shown once by the backend; it goes
+ *   straight into node-agent.json and never crosses the renderer bridge.
+ * - No .env, no child process, no ENCRYPTION_KEY — the native agent has
+ *   no secrets to encrypt (no DB, no password storage).
+ * - Re-provisioning with an explicit existing key preserves it.
  */
 
-import { randomBytes } from "crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import path from "path";
-import { app } from "electron";
-import { getNodeRuntimeService } from "./node-runtime";
+import {
+    getNodeAgent,
+    readAgentConfig,
+    writeAgentConfig,
+} from "../node/node-agent";
 
 export interface ProvisioningResult {
     success: boolean;
-    step?: "register" | "write-env" | "start";
+    step?: "register" | "write-config" | "start";
     error?: string;
     /** 402 = SELFHOSTED license missing (sell it in the Marketplace) */
     licenseRequired?: boolean;
     /** 409 = node quota reached (revoke one first) */
     limitReached?: boolean;
-    nodeId?: string;
 }
 
 export interface ProvisioningConfig {
@@ -44,48 +41,22 @@ export interface ProvisioningConfig {
     existingNodeKey?: string;
 }
 
-/** Required env for the embedded node server to boot (see selfhosted env.schema). */
-function buildEnvFile(params: {
-    nodeKey: string;
-    encryptionKey: string;
-    tunnelUrl: string;
-    port: number;
-}): string {
-    const lines = [
-        "# Embedded self-hosted node — provisioned by the desktop app",
-        `NODE_KEY=${params.nodeKey}`,
-        `ENCRYPTION_KEY=${params.encryptionKey}`,
-        `TUNNEL_URL=${params.tunnelUrl}`,
-        `DATABASE_URL=file:./profiles.db`,
-        `PORT=${params.port}`,
-        `HOST=127.0.0.1`,
-        `NODE_ENV=production`,
-    ];
-    return lines.join("\n") + "\n";
-}
-
-export function getProvisioningDir(): string {
-    const dir = path.join(app.getPath("userData"), "node-runtime");
-    mkdirSync(dir, { recursive: true });
-    return dir;
-}
-
-/** Does the embedded node already have a .env (previously provisioned)? */
+/** Does the agent already have a config (previously provisioned)? */
 export function isProvisioned(): boolean {
-    return existsSync(path.join(getProvisioningDir(), ".env"));
+    return readAgentConfig() !== null;
 }
 
 /**
- * Full onboarding: register node → write .env → start runtime.
- * Idempotent-ish: if already provisioned, just (re)starts the runtime.
+ * Full onboarding: register node → persist config → start agent.
+ * If already provisioned without an explicit existing key, just start.
  */
 export async function provisionNode(config: ProvisioningConfig): Promise<ProvisioningResult> {
-    const runtime = getNodeRuntimeService();
-    const envPath = path.join(getProvisioningDir(), ".env");
+    const agent = getNodeAgent();
+    const existing = readAgentConfig();
 
     // Already provisioned → just start.
-    if (existsSync(envPath) && !config.existingNodeKey) {
-        const started = await runtime.start();
+    if (existing && !config.existingNodeKey) {
+        const started = agent.start();
         return started.started
             ? { success: true }
             : { success: false, step: "start", error: started.error };
@@ -151,37 +122,25 @@ export async function provisionNode(config: ProvisioningConfig): Promise<Provisi
         }
     }
 
-    // Step 2: write the .env. If one already exists, preserve its
-    // ENCRYPTION_KEY — rotating it would make every stored profile secret
-    // unreadable — plus any operator-customized keys.
+    // Step 2: persist the agent config (nodeKey lives ONLY here).
     try {
-        const envPathFull = envPath;
-        const existing: Record<string, string> = {};
-        if (existsSync(envPathFull)) {
-            for (const line of readFileSync(envPathFull, "utf-8").split("\n")) {
-                const m = /^([A-Z_]+)=(.*)$/.exec(line.trim());
-                if (m) existing[m[1]] = m[2];
-            }
-        }
-        const encryptionKey =
-            existing.ENCRYPTION_KEY || randomBytes(32).toString("hex");
-        const tunnelUrl = config.backendUrl.replace(/^http/, "ws") + "/ws/selfhosted";
-        const envContent = buildEnvFile({
+        writeAgentConfig({
             nodeKey,
-            encryptionKey,
-            tunnelUrl,
-            port: 4000,
+            backendUrl: config.backendUrl,
+            nodeName: config.nodeName,
         });
-        writeFileSync(envPathFull, envContent, { encoding: "utf-8" });
     } catch (err) {
-        return { success: false, step: "write-env", error: String(err) };
+        return { success: false, step: "write-config", error: String(err) };
     }
 
-    // Step 3: start the runtime.
-    const started = await runtime.start();
+    // Step 3: start (or hot-reload config into the agent) and connect.
+    if (!agent.applyNewConfig()) {
+        return { success: false, step: "start", error: "Agent config could not be reloaded." };
+    }
+    const started = agent.start();
     if (!started.started) {
         return { success: false, step: "start", error: started.error };
     }
 
-    return { success: true, nodeId: undefined };
+    return { success: true };
 }

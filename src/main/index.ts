@@ -4,12 +4,12 @@
  * The layers (one concern per module):
  *   window.ts                     app window + web-contents policies
  *   ipc/register-playwright.ts    channel handlers (transport)
- *   ipc/register-node-runtime.ts  embedded node runtime channels (transport)
+ *   ipc/register-node-runtime.ts  embedded node agent channels (transport)
  *   services/session-launcher.ts  connect/launch/portal flows (behavior)
  *   services/browser-store.ts     connection + status state
  *   services/proxy-bridge.ts      authenticated proxy bridges
  *   services/fingerprint-injection.ts  stealth init script
- *   services/node-runtime.ts      embedded self-hosted node server lifecycle
+ *   node/node-agent.ts            embedded self-hosted node agent (native)
  *   browser-manager.ts            Chromium install/executable resolution
  */
 
@@ -20,7 +20,7 @@ import { BrowserManager } from "./browser-manager";
 import { registerPlaywrightIpc } from "./ipc/register-playwright";
 import { registerNodeRuntimeIpc } from "./ipc/register-node-runtime";
 import { registerNodeProvisioningIpc } from "./ipc/register-node-provisioning";
-import { getNodeRuntimeService } from "./services/node-runtime";
+import { getNodeAgent } from "./node/node-agent";
 import { allConnections } from "./services/browser-store";
 import { createWindow, getMainWindow, installWebContentsPolicies } from "./window";
 
@@ -48,21 +48,22 @@ app.whenReady().then(async () => {
         }
     });
 
-    // Auto-start the embedded node runtime if the payload is present.
-    // Missing payload = the machine hasn't enabled the self-hosted node;
-    // stay silent and let the renderer offer onboarding instead.
-    const nodeRuntime = getNodeRuntimeService();
-    nodeRuntime.start().then((result) => {
-        if (result.started) {
-            console.log("[NodeRuntime] embedded node server is running");
-        }
-    });
+    // Auto-start the embedded node agent when this machine has been
+    // provisioned (node-agent.json present). Not provisioned = the user
+    // hasn't enabled the self-hosted node; stay silent and let the
+    // renderer offer onboarding.
+    const nodeAgent = getNodeAgent();
+    const started = nodeAgent.start();
+    if (started.started) {
+        console.log("[NodeAgent] embedded node agent connecting to tunnel");
+    }
 });
 
 app.on("window-all-closed", async () => {
-    // Stop the embedded node server before the app exits so the tunnel
-    // closes cleanly (backend marks the node OFFLINE immediately).
-    await getNodeRuntimeService().stop();
+    // Stop the embedded node agent before the app exits so the tunnel
+    // closes cleanly (backend marks the node OFFLINE immediately) and
+    // every session's Chrome flushes its profile to disk.
+    await getNodeAgent().stop();
 
     // Clean up all browser connections
     for (const [sessionId, connection] of allConnections()) {
