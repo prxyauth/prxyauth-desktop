@@ -7,7 +7,8 @@
  * ipc/register-playwright.ts and only validate/delegate.
  */
 
-import { chromium } from "playwright-core";
+import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
+import { BrowserManager } from "../browser-manager";
 import { injectFingerprint } from "./fingerprint-injection";
 import {
     cleanupProxyBridge,
@@ -55,6 +56,8 @@ export interface FingerprintInput {
 export interface SessionInfoInput {
     provider?: string;
     email?: string;
+    /** Session's browser mode — routes the launch channel. */
+    browserMode?: "PLAYWRIGHT" | "SELFHOSTED";
     [key: string]: unknown;
 }
 
@@ -138,12 +141,202 @@ export async function connectRemote(
 }
 
 /**
- * Launch a local headful browser for a session with a PERSISTENT per-account
- * profile — the same folder the node agent uses — so signed-in state survives
- * across launches. The executable honors the user's session-browser choice
- * (installed Google Chrome by default).
+ * Launch a local headful browser for a session. The channel is keyed by the
+ * session's browserMode, restoring the pre-node-pivot split:
+ *
+ *  - PLAYWRIGHT (cloud): inbuilt managed Chromium, ephemeral context seeded
+ *    from the backend-synced storage state. Identical to the classic launch.
+ *  - SELFHOSTED (node): the user's chosen browser (installed Chrome by
+ *    default) with a persistent per-account profile shared with the node
+ *    agent, so sign-in state survives across launches.
+ *
+ * Unknown/missing mode falls back to SELFHOSTED behavior (persistent profile)
+ * — the safer default now that modes carry licenses.
  */
 export async function launchLocal(input: LaunchLocalInput): Promise<{
+    success: boolean;
+    message?: string;
+    error?: string;
+}> {
+    const mode = input.session?.browserMode;
+    if (mode === "PLAYWRIGHT") {
+        return launchLocalPlaywright(input);
+    }
+    return launchLocalSelfhosted(input);
+}
+
+/** Classic cloud channel: inbuilt Chromium, ephemeral storage-state context. */
+async function launchLocalPlaywright(input: LaunchLocalInput): Promise<{
+    success: boolean;
+    message?: string;
+    error?: string;
+}> {
+    const { sessionId, storageState, proxy, fingerprint, session, frontendUrl } = input;
+    try {
+        // Check if already open and reuse if possible
+        const existingConnection = getConnection(sessionId);
+        if (existingConnection) {
+            console.log(`[Main] Reusing existing browser for session: ${sessionId}`);
+            try {
+                await existingConnection.page.bringToFront();
+                return { success: true, message: "Reused existing browser instance" };
+            } catch {
+                console.log(
+                    `[Main] Existing browser for ${sessionId} seems dead, launching new one.`,
+                );
+                deleteConnection(sessionId);
+                await cleanupProxyBridge(sessionId);
+            }
+        }
+
+        console.log(`Launching local browser for session: ${sessionId}`);
+        console.log(`UserAgent to apply: ${fingerprint?.userAgent}`);
+        console.log(`Proxy data received:`, JSON.stringify(proxy, null, 2));
+
+        emitBrowserStatus(sessionId, "launching");
+
+        // Prepare proxy (returns object with server, username, password)
+        const proxyConfig = await prepareProxy(sessionId, proxy);
+
+        const locale = fingerprint?.language || "en-US";
+
+        // Classic cloud channel: the inbuilt managed Chromium, ephemeral
+        // context seeded from the backend-synced storage state. This is the
+        // pre-node-pivot launch, unchanged.
+        const browser = await chromium.launch({
+            executablePath: BrowserManager.getInstance().getExecutablePath(),
+            headless: false,
+            args: [
+                "--disable-blink-features=AutomationControlled",
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-infobars",
+                "--window-position=0,0",
+                "--no-first-run",
+                "--no-default-browser-check",
+                `--lang=${locale}`,
+                `--accept-lang=${locale}`,
+            ],
+        });
+
+        browser.on("disconnected", async () => {
+            console.log(`Browser disconnected for session: ${sessionId}`);
+            deleteConnection(sessionId);
+            emitBrowserClosed(sessionId);
+            await cleanupProxyBridge(sessionId);
+        });
+
+        const context = await browser.newContext({
+            storageState: storageState || undefined,
+            viewport: fingerprint?.viewport || { width: 1280, height: 720 },
+            locale,
+            timezoneId: fingerprint?.timezoneId || "America/New_York",
+            geolocation: fingerprint?.geolocation,
+            permissions: ["geolocation"],
+            extraHTTPHeaders: {
+                "Accept-Language": `${locale},${locale.split("-")[0]};q=0.9,en;q=0.8`,
+            },
+            proxy: proxyConfig
+                ? {
+                      server: proxyConfig.server,
+                      username: proxyConfig.username,
+                      password: proxyConfig.password,
+                  }
+                : undefined,
+            // Stealth-tooling trade-offs, deliberately enabled for the
+            // account-automation surface (see CONSISTENCY-PLAN.md item 8).
+            bypassCSP: true,
+            ignoreHTTPSErrors: true,
+        });
+
+        // Adopt the context's first page as the session's page.
+        let page = context.pages()[0];
+        if (!page) page = await context.newPage();
+
+        // [DETECTION BYPASS] Google detection of browser tampering is extremely aggressive.
+
+        // Override default new tab behavior to visit Google.com
+        let isFirstPage = true;
+        context.on("page", (newPage) => {
+            // Detect if all pages are closed (user closes window)
+            newPage.on("close", () => {
+                setTimeout(async () => {
+                    try {
+                        if (context.pages().length === 0) {
+                            console.log(`[Main] All pages closed for session: ${sessionId}`);
+                            await terminateBrowser(sessionId);
+                        }
+                    } catch {
+                        // Ignore if context is destroyed
+                    }
+                }, 100);
+            });
+
+            if (isFirstPage) {
+                isFirstPage = false;
+                return;
+            }
+
+            const handleNewTab = async () => {
+                try {
+                    if (newPage.isClosed()) return;
+                    const url = newPage.url();
+                    if (
+                        url === "about:blank" ||
+                        url.startsWith("chrome://newtab") ||
+                        url.startsWith("chrome://new-tab-page")
+                    ) {
+                        await newPage.goto("https://google.com").catch(() => {});
+                    }
+                } catch {
+                    // Ignore if closed or navigation fails
+                }
+            };
+
+            void handleNewTab();
+            newPage.on("domcontentloaded", () => void handleNewTab());
+        });
+
+        // [DETECTION BYPASS] Google detection of browser tampering is extremely aggressive.
+        // We skip JS-based fingerprint injection for Google to favor native browser properties.
+        const isGoogle =
+            session?.provider === "GOOGLE" ||
+            session?.email?.toLowerCase().endsWith("@gmail.com") ||
+            session?.email?.toLowerCase().endsWith("@googlemail.com");
+
+        if (!isGoogle) {
+            await injectFingerprint(context, {
+                ...fingerprint,
+                proxyIp: proxy?.externalIp,
+                sessionId: sessionId,
+            });
+        }
+
+        const baseUrl = frontendUrl || "http://localhost:3000";
+        await page.goto(`${baseUrl}/portal/${sessionId}`);
+
+        // Store the connection (classic launch carries a full browser handle).
+        setConnection(sessionId, { browser, context, page });
+        emitBrowserStatus(sessionId, "open");
+
+        return { success: true, message: "Local browser launched" };
+    } catch (error) {
+        console.error("Failed to launch local browser:", error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Launch failed",
+        };
+    }
+}
+
+/**
+ * SELFHOSTED channel: the user's chosen browser (installed Chrome by default)
+ * with a PERSISTENT per-account profile shared with the node agent, so
+ * signed-in state survives across launches. Profile-writer marker rules keep
+ * the same-or-newer binary invariant that prevents the 0x80000003 crash.
+ */
+async function launchLocalSelfhosted(input: LaunchLocalInput): Promise<{
     success: boolean;
     message?: string;
     error?: string;

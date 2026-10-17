@@ -67,7 +67,7 @@ declare global {
                     storageState: unknown,
                     proxy?: IpcProxy,
                     fingerprint?: unknown,
-                    session?: { email?: string; password?: string },
+                    session?: { email?: string; password?: string; browserMode?: string },
                     frontendUrl?: string,
                 ) => Promise<IpcApiResult>;
                 bringToFront: (sessionId: string) => Promise<IpcApiResult>;

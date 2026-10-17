@@ -122,7 +122,7 @@ contextBridge.exposeInMainWorld("prxApi", {
             storageState: unknown,
             proxy?: Proxy,
             fingerprint?: Fingerprint,
-            session?: { email?: string; password?: string },
+            session?: { email?: string; password?: string; browserMode?: string },
             frontendUrl?: string,
         ): Promise<ApiResult> =>
             ipcRenderer.invoke("playwright:launchLocal", {

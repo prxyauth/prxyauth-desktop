@@ -112,7 +112,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
                     storageState,
                     session.proxy,
                     session.fingerprint,
-                    { email: session.email },
+                    { email: session.email, browserMode: session.browserMode },
                     frontendUrl,
                 );
 
