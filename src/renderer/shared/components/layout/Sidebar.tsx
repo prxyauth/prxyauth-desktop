@@ -4,6 +4,7 @@ import {
     ArrowLeftRight,
     ChevronLeft,
     ChevronRight,
+    Cpu,
     Layers,
     LayoutDashboard,
     Server,
@@ -19,6 +20,7 @@ const menuItems = [
     { label: "Transactions", id: "transactions", icon: ArrowLeftRight },
     { label: "Proxy Manager", id: "proxies", icon: Server },
     { label: "Proxy Providers", id: "proxy-providers", icon: Layers },
+    { label: "Self-Hosted Node", id: "node-runtime", icon: Cpu },
     { label: "Settings", id: "settings", icon: Settings },
 ];
 

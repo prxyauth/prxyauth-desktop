@@ -14,6 +14,7 @@ import { SettingsView } from "@features/settings/SettingsView";
 import { MarketplaceView } from "@features/marketplace/MarketplaceView";
 import { TronPaymentPage } from "@features/marketplace/TronPaymentPage";
 import { TransactionsView } from "@features/transactions/TransactionsView";
+import { NodeRuntimeView } from "@features/node-runtime/NodeRuntimeView";
 
 export function MainLayout() {
     const [activeTab, setActiveTab] = useState("sessions");
@@ -68,6 +69,8 @@ export function MainLayout() {
                 return <ProxiesView />;
             case "proxy-providers":
                 return <ProxyProvidersView />;
+            case "node-runtime":
+                return <NodeRuntimeView />;
             case "transactions":
                 return <TransactionsView />;
             case "notifications":

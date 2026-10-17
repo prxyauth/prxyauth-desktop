@@ -11,65 +11,49 @@ import {
     type NodeRuntimeInfo,
 } from "../services/node-runtime";
 
-export interface NodeRuntimeIpcPayload {
-    channel: string;
+/** Matches the ApiResult shape the preload exposes (success/error/data). */
+interface ApiResult<T = unknown> {
     success: boolean;
-    info?: NodeRuntimeInfo;
     error?: string;
+    message?: string;
+    data?: T;
 }
 
 export function registerNodeRuntimeIpc(): void {
     const runtime = getNodeRuntimeService();
 
-    ipcMain.handle("node-runtime:get-info", (): NodeRuntimeIpcPayload => ({
-        channel: "get-info",
+    ipcMain.handle("node-runtime:get-info", (): ApiResult<NodeRuntimeInfo> => ({
         success: true,
-        info: runtime.getInfo(),
+        data: runtime.getInfo(),
     }));
 
-    ipcMain.handle("node-runtime:is-installed", (): NodeRuntimeIpcPayload => ({
-        channel: "is-installed",
+    ipcMain.handle("node-runtime:is-installed", (): ApiResult<NodeRuntimeInfo> => ({
         success: true,
-        info: {
+        data: {
             ...runtime.getInfo(),
             status: isNodeRuntimeInstalled() ? "stopped" : "not-installed",
         },
     }));
 
-    ipcMain.handle("node-runtime:start", async (): Promise<NodeRuntimeIpcPayload> => {
+    ipcMain.handle("node-runtime:start", async (): Promise<ApiResult<NodeRuntimeInfo>> => {
         try {
             const result = await runtime.start();
             return {
-                channel: "start",
                 success: result.started,
-                info: runtime.getInfo(),
                 error: result.error,
+                data: runtime.getInfo(),
             };
         } catch (err) {
-            return {
-                channel: "start",
-                success: false,
-                info: runtime.getInfo(),
-                error: String(err),
-            };
+            return { success: false, error: String(err), data: runtime.getInfo() };
         }
     });
 
-    ipcMain.handle("node-runtime:stop", async (): Promise<NodeRuntimeIpcPayload> => {
+    ipcMain.handle("node-runtime:stop", async (): Promise<ApiResult<NodeRuntimeInfo>> => {
         try {
             await runtime.stop();
-            return {
-                channel: "stop",
-                success: true,
-                info: runtime.getInfo(),
-            };
+            return { success: true, data: runtime.getInfo() };
         } catch (err) {
-            return {
-                channel: "stop",
-                success: false,
-                info: runtime.getInfo(),
-                error: String(err),
-            };
+            return { success: false, error: String(err), data: runtime.getInfo() };
         }
     });
 }

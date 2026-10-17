@@ -93,6 +93,21 @@ declare global {
                 onInstallSuccess: (callback: () => void) => () => void;
                 onInstallFailed: (callback: (error: any) => void) => () => void;
             };
+            nodeRuntime: {
+                getInfo: () => Promise<
+                    IpcApiResult<{
+                        status: string;
+                        pid?: number;
+                        port: number;
+                        lastExitCode?: number | null;
+                        lastCrashAt?: string | null;
+                        restartCount: number;
+                    }>
+                >;
+                isInstalled: () => Promise<IpcApiResult<{ status: string }>>;
+                start: () => Promise<IpcApiResult>;
+                stop: () => Promise<IpcApiResult>;
+            };
         };
     }
 }
