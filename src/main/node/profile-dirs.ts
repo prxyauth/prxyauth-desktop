@@ -10,6 +10,7 @@
  */
 
 import { mkdirSync } from "fs";
+import { existsSync } from "fs";
 import path from "path";
 import { app } from "electron";
 
@@ -36,4 +37,13 @@ export function ensureProfileDir(profileName: string): string {
     const dir = path.join(profilesBaseDir(), sanitize(profileName));
     mkdirSync(dir, { recursive: true });
     return dir;
+}
+
+/**
+ * True when the profile dir holds no Chrome state yet (no 'Default'
+ * subfolder) — i.e. the very first launch into it. Used to decide whether
+ * importing the backend's storageState would seed or clobber.
+ */
+export function isProfileEmpty(profileDir: string): boolean {
+    return !existsSync(path.join(profileDir, "Default"));
 }

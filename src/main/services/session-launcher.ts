@@ -8,7 +8,6 @@
  */
 
 import { chromium } from "playwright-core";
-import { BrowserManager } from "../browser-manager";
 import { injectFingerprint } from "./fingerprint-injection";
 import {
     cleanupProxyBridge,
@@ -22,6 +21,18 @@ import {
     getConnection,
     setConnection,
 } from "./browser-store";
+import { ensureProfileDir, isProfileEmpty } from "../node/profile-dirs";
+import { resolveChromeExecutable, type BrowserChoice } from "../node/chrome-launcher";
+import { getBrowserChoice } from "../node/node-agent";
+
+export interface LaunchLocalInput {
+    sessionId: string;
+    storageState?: string;
+    proxy?: ProxyInput;
+    fingerprint?: FingerprintInput;
+    session?: SessionInfoInput;
+    frontendUrl?: string;
+}
 
 export interface FingerprintInput {
     userAgent?: string;
@@ -50,8 +61,14 @@ export async function terminateBrowser(sessionId: string): Promise<boolean> {
 
     try {
         console.log(`[Main] Terminating browser for session: ${sessionId}`);
-        await connection.browser.close();
-        // The 'disconnected' listener handles map deletion and bridge cleanup
+        // Persistent contexts (no browser handle) close via the context;
+        // full launches close via the browser.
+        if (connection.browser) {
+            await connection.browser.close();
+        } else {
+            await connection.context.close();
+        }
+        // The close/disconnect listeners handle map deletion and bridge cleanup
         return true;
     } catch (error) {
         console.error(`[Main] Error terminating browser for ${sessionId}:`, error);
@@ -116,15 +133,17 @@ export async function connectRemote(
     }
 }
 
-/** Launch a local headful browser for a session with full identity state. */
-export async function launchLocal(input: {
-    sessionId: string;
-    storageState?: string;
-    proxy?: ProxyInput;
-    fingerprint?: FingerprintInput;
-    session?: SessionInfoInput;
-    frontendUrl?: string;
-}): Promise<{ success: boolean; message?: string; error?: string }> {
+/**
+ * Launch a local headful browser for a session with a PERSISTENT per-account
+ * profile — the same folder the node agent uses — so signed-in state survives
+ * across launches. The executable honors the user's session-browser choice
+ * (installed Google Chrome by default).
+ */
+export async function launchLocal(input: LaunchLocalInput): Promise<{
+    success: boolean;
+    message?: string;
+    error?: string;
+}> {
     const { sessionId, storageState, proxy, fingerprint, session, frontendUrl } = input;
     try {
         // Check if already open and reuse if possible
@@ -149,13 +168,32 @@ export async function launchLocal(input: {
 
         emitBrowserStatus(sessionId, "launching");
 
-        // Prepare proxy (returns object with server, username, password)
+        // Resolve the executable per the user's session-browser choice.
+        let browserChoice: BrowserChoice = "auto";
+        try {
+            browserChoice = getBrowserChoice();
+        } catch {
+            /* userData not ready yet — auto */
+        }
+        const resolved = resolveChromeExecutable(browserChoice);
+        console.log(`[Main] session browser → ${resolved.kind} (${resolved.path})`);
+
+        // Persistent per-account profile — same dir the node agent uses.
+        const profileName = session?.email || sessionId;
+        const profileDir = ensureProfileDir(profileName);
+        console.log(`[Main] profile dir: ${profileDir}`);
+
+        // Prepare proxy (returns object with server, username, password).
+        // Persistent contexts accept the same context options as newContext,
+        // including authenticated proxy.
         const proxyConfig = await prepareProxy(sessionId, proxy);
 
         const locale = fingerprint?.language || "en-US";
 
-        const browser = await chromium.launch({
-            executablePath: BrowserManager.getInstance().getExecutablePath(),
+        // PERSISTENT CONTEXT: the real user-data-dir makes this a full Chrome
+        // window whose state survives restarts — like a normal user's Chrome.
+        const context = await chromium.launchPersistentContext(profileDir, {
+            executablePath: resolved.path,
             headless: false,
             args: [
                 "--disable-blink-features=AutomationControlled",
@@ -169,26 +207,8 @@ export async function launchLocal(input: {
                 `--lang=${locale}`,
                 `--accept-lang=${locale}`,
             ],
-        });
-
-        // Listen for browser disconnection (user closes browser directly)
-        browser.on("disconnected", async () => {
-            console.log(`Browser disconnected for session: ${sessionId}`);
-            deleteConnection(sessionId);
-            // Notify UI immediately, before slow cleanup
-            emitBrowserClosed(sessionId);
-            // Cleanup proxy bridge after notifying (can be slow)
-            await cleanupProxyBridge(sessionId);
-        });
-
-        const context = await browser.newContext({
-            storageState: storageState || undefined,
             viewport: fingerprint?.viewport || { width: 1280, height: 720 },
-            userAgent: fingerprint?.userAgent,
-            deviceScaleFactor: fingerprint?.deviceScaleFactor || 1,
-            isMobile: fingerprint?.isMobile || false,
-            hasTouch: fingerprint?.hasTouch || false,
-            locale: locale,
+            locale,
             timezoneId: fingerprint?.timezoneId || "America/New_York",
             geolocation: fingerprint?.geolocation,
             permissions: ["geolocation"],
@@ -206,9 +226,18 @@ export async function launchLocal(input: {
             // account-automation surface (see CONSISTENCY-PLAN.md item 8).
             bypassCSP: true,
             ignoreHTTPSErrors: true,
+            // Storage-state import seeds the backend's synced identity on
+            // FIRST launch into an empty profile; the profile's own cookies
+            // win afterwards (re-import would clobber them). UA override is
+            // omitted — persistent profiles favor native properties.
+            ...(storageState && isProfileEmpty(profileDir) ? { storageState } : {}),
         });
 
-        // Monitor context for user closure
+        // Adopt the context's first page as the session's page.
+        let page = context.pages()[0];
+        if (!page) page = await context.newPage();
+
+        // Monitor the context for user closure
         context.on("close", async () => {
             console.log(`[Main] Context closed for session: ${sessionId}`);
             await terminateBrowser(sessionId);
@@ -271,13 +300,11 @@ export async function launchLocal(input: {
             });
         }
 
-        const page = await context.newPage();
-
         const baseUrl = frontendUrl || "http://localhost:3000";
         await page.goto(`${baseUrl}/portal/${sessionId}`);
 
-        // Store the connection
-        setConnection(sessionId, { browser, context, page });
+        // Store the connection (persistent contexts carry no browser handle).
+        setConnection(sessionId, { context, page, profileDir });
         emitBrowserStatus(sessionId, "open");
 
         return { success: true, message: "Local browser launched" };

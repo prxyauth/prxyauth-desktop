@@ -10,9 +10,12 @@
 import type { Browser, BrowserContext, Page } from "playwright-core";
 
 export interface BrowserConnection {
-    browser: Browser;
+    /** Present for full-browser launches; absent for persistent contexts. */
+    browser?: Browser;
     context: BrowserContext;
     page: Page;
+    /** Profile dir for persistent launches (used to prevent double-launches). */
+    profileDir?: string;
 }
 
 /** Live sessionId → connection map. */

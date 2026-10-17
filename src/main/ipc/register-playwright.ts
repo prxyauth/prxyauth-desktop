@@ -151,7 +151,10 @@ export function registerPlaywrightIpc(): void {
 
         for (const [sessionId, connection] of allConnections()) {
             try {
-                if (connection.browser.isConnected()) {
+                const live = connection.browser
+                    ? connection.browser.isConnected()
+                    : /* persistent context */ true;
+                if (live) {
                     liveSessions.push(sessionId);
                 } else {
                     deadSessions.push(sessionId);

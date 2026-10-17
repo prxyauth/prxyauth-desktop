@@ -68,7 +68,11 @@ app.on("window-all-closed", async () => {
     // Clean up all browser connections
     for (const [sessionId, connection] of allConnections()) {
         try {
-            await connection.browser.close();
+            if (connection.browser) {
+                await connection.browser.close();
+            } else {
+                await connection.context.close();
+            }
         } catch (e) {
             console.error(`Error closing browser for ${sessionId}:`, e);
         }
