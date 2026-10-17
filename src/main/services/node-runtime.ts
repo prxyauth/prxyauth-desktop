@@ -39,9 +39,7 @@ export interface NodeRuntimeInfo {
 /** Where the built node payload lives inside the packaged app. */
 function payloadDir(): string {
     // dev: <desktop-repo>/node-runtime/ ; packaged: resources/node-runtime/
-    const base = app.isPackaged
-        ? process.resourcesPath
-        : path.resolve(app.getAppPath(), "node-runtime");
+    const base = app.isPackaged ? process.resourcesPath : app.getAppPath();
     return path.join(base, "node-runtime");
 }
 
