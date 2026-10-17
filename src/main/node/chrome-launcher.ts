@@ -98,12 +98,19 @@ async function waitForCDP(
     throw new Error(`Chrome CDP endpoint not ready on port ${debugPort} after ${timeoutMs}ms`);
 }
 
-/** Resolves the Chromium executable — the app's managed install first,
- *  real Chrome candidates as fallback (selfhosted parity). */
-function resolveChromeExecutable(): string {
-    const managed = BrowserManager.getInstance().getExecutablePath();
-    if (managed && existsSync(managed)) return managed;
+/** Which executable self-hosted sessions launch. */
+export type BrowserChoice = "auto" | "system" | "managed";
 
+export interface ResolvedBrowser {
+    path: string;
+    kind: "system" | "managed";
+}
+
+/**
+ * Standard system Google Chrome install locations (selfhosted parity).
+ * Returns null when no system Chrome is installed.
+ */
+export function detectSystemChrome(): string | null {
     const candidates: string[] = [];
     if (process.platform === "win32") {
         candidates.push(
@@ -112,16 +119,78 @@ function resolveChromeExecutable(): string {
             path.join(process.env.LOCALAPPDATA || "", "Google", "Chrome", "Application", "chrome.exe"),
         );
     } else if (process.platform === "darwin") {
-        candidates.push("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome");
+        candidates.push(
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            path.join(process.env.HOME || "", "Applications", "Google Chrome.app/Contents/MacOS/Google Chrome"),
+        );
     } else {
-        candidates.push("/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser");
+        candidates.push(
+            "/usr/bin/google-chrome",
+            "/usr/bin/google-chrome-stable",
+            "/usr/bin/chromium",
+            "/usr/bin/chromium-browser",
+            "/snap/bin/chromium",
+        );
     }
     for (const c of candidates) {
         if (c && existsSync(c)) return c;
     }
+    return null;
+}
+
+/** What's actually available on this machine. */
+export function browserAvailability(): { system: string | null; managed: string | null } {
+    let managed: string | null = null;
+    try {
+        const p = BrowserManager.getInstance().getExecutablePath();
+        managed = p && existsSync(p) ? p : null;
+    } catch {
+        managed = null;
+    }
+    return { system: detectSystemChrome(), managed };
+}
+
+/**
+ * Resolve the executable for a browser choice.
+ *
+ * auto: installed Google Chrome first — a real Google build has the best
+ * sign-in fidelity (matches the proven selfhosted launcher), with the
+ * app-managed browser as fallback when no system Chrome exists.
+ * system / managed: the explicit pick, falling back to the other when
+ * unavailable so a session never fails on a missing binary.
+ */
+export function resolveChromeExecutable(choice: BrowserChoice = "auto"): ResolvedBrowser {
+    const { system, managed } = browserAvailability();
+    if (choice === "system") {
+        if (system) return { path: system, kind: "system" };
+        if (managed) {
+            log.warn("[NodeAgent] no installed Google Chrome — falling back to the app-managed browser");
+            return { path: managed, kind: "managed" };
+        }
+        throw new Error("No installed Google Chrome found — install Chrome or choose the app-managed browser.");
+    }
+    if (choice === "managed") {
+        if (managed) return { path: managed, kind: "managed" };
+        if (system) {
+            log.warn("[NodeAgent] app-managed browser missing — falling back to installed Chrome");
+            return { path: system, kind: "system" };
+        }
+        throw new Error("The app-managed browser is not installed — see the Browser section.");
+    }
+    if (system) return { path: system, kind: "system" };
+    if (managed) return { path: managed, kind: "managed" };
     throw new Error(
-        "No Chrome/Chromium executable found — install the browser from the app's Browser section first.",
+        "No Chrome/Chromium executable found — install Google Chrome, or the browser from the app's Browser section.",
     );
+}
+
+/** Non-throwing variant for status surfaces. */
+export function tryResolveChromeExecutable(choice: BrowserChoice): ResolvedBrowser | null {
+    try {
+        return resolveChromeExecutable(choice);
+    } catch {
+        return null;
+    }
 }
 
 /**
@@ -133,13 +202,18 @@ function resolveChromeExecutable(): string {
  * detaches leaves the browser-level CDP endpoint in a degraded state
  * where a new connectOverCDP handshake times out (proven failure mode).
  */
-export async function launchChromeRemote(profileDir: string, profileName: string): Promise<RemoteBrowser> {
+export async function launchChromeRemote(
+    profileDir: string,
+    profileName: string,
+    choice: BrowserChoice = "auto",
+): Promise<RemoteBrowser> {
     const debugPort = await findAvailablePort();
-    const chromePath = resolveChromeExecutable();
+    const resolved = resolveChromeExecutable(choice);
+    const chromePath = resolved.path;
     const args = buildChromeArgs(debugPort, profileDir);
 
     log.info(
-        `[NodeAgent] launching Chrome for remote automation (profile=${profileName} port=${debugPort})`,
+        `[NodeAgent] launching ${resolved.kind} Chrome for remote automation (profile=${profileName} port=${debugPort})`,
     );
 
     const chromeProcess = spawn(chromePath, args, {

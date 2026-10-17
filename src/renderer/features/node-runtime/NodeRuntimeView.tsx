@@ -8,7 +8,15 @@
 
 import { useNodeRuntime } from "./hooks/useNodeRuntime";
 import { useProvisioning } from "./hooks/useProvisioning";
-import { Cpu, Play, RefreshCw, Square } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Cpu, Globe, Play, RefreshCw, Square } from "lucide-react";
+
+interface BrowserInfo {
+    system: string | null;
+    managed: string | null;
+    choice: string;
+    resolved: { path: string; kind: string } | null;
+}
 
 interface StatusPresentation {
     dot: string;
@@ -70,6 +78,28 @@ function presentStatus(
 export function NodeRuntimeView() {
     const { info, loading, busy, error, start, stop, refresh } = useNodeRuntime();
     const prov = useProvisioning(() => void refresh());
+    const [browser, setBrowser] = useState<BrowserInfo | null>(null);
+
+    const loadBrowser = useCallback(async () => {
+        try {
+            const res = await window.prxApi.nodeRuntime.getBrowser();
+            if (res.data) setBrowser(res.data);
+        } catch {
+            /* availability is best-effort */
+        }
+    }, []);
+
+    useEffect(() => {
+        void loadBrowser();
+    }, [loadBrowser]);
+
+    const chooseBrowser = useCallback(
+        async (choice: "auto" | "system" | "managed") => {
+            const res = await window.prxApi.nodeRuntime.setBrowser(choice);
+            if (res.data) setBrowser(res.data);
+        },
+        [],
+    );
 
     const p = presentStatus(
         info?.state ?? "provisioning-required",
@@ -186,6 +216,58 @@ export function NodeRuntimeView() {
                         )}
                     </section>
 
+                    <section className="rounded-xl border border-white/10 bg-white/5 p-5 space-y-4">
+                        <div className="flex items-center gap-3">
+                            <Globe className="w-4 h-4 text-slate-400" />
+                            <div>
+                                <p className="text-slate-100 font-medium">Session browser</p>
+                                <p className="text-sm text-slate-400">
+                                    Which Chrome self-hosted sessions open in. Applies to the next session.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="grid gap-2">
+                            <BrowserOption
+                                label="Automatic (recommended)"
+                                hint={
+                                    browser?.resolved
+                                        ? `Currently using: ${browser.resolved.kind === "system" ? "installed Google Chrome" : "app-managed browser"}`
+                                        : "No browser available"
+                                }
+                                available={!!browser?.resolved}
+                                active={browser?.choice === "auto"}
+                                onClick={() => void chooseBrowser("auto")}
+                            />
+                            <BrowserOption
+                                label="Installed Google Chrome"
+                                hint={
+                                    browser?.system
+                                        ? "Detected — best sign-in fidelity"
+                                        : "Not detected on this machine"
+                                }
+                                available={!!browser?.system}
+                                active={browser?.choice === "system"}
+                                onClick={() => void chooseBrowser("system")}
+                            />
+                            <BrowserOption
+                                label="App-managed browser"
+                                hint={
+                                    browser?.managed
+                                        ? "Bundled Chromium from the Browser section"
+                                        : "Not installed — see the Browser section"
+                                }
+                                available={!!browser?.managed}
+                                active={browser?.choice === "managed"}
+                                onClick={() => void chooseBrowser("managed")}
+                            />
+                        </div>
+                        {browser?.resolved && (
+                            <p className="text-xs text-slate-500 font-mono truncate" title={browser.resolved.path}>
+                                {browser.resolved.path}
+                            </p>
+                        )}
+                    </section>
+
                     <section className="rounded-xl border border-white/10 bg-white/5 divide-y divide-white/5">
                         <Row label="State" value={info?.state ?? "—"} />
                         <Row label="Active sessions" value={String(info?.activeSessions ?? 0)} />
@@ -204,5 +286,37 @@ function Row({ label, value }: { label: string; value: string }) {
             <span className="text-sm text-slate-400">{label}</span>
             <span className="text-sm text-slate-200 font-mono">{value}</span>
         </div>
+    );
+}
+
+function BrowserOption({
+    label,
+    hint,
+    available,
+    active,
+    onClick,
+}: {
+    label: string;
+    hint: string;
+    available: boolean;
+    active: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            onClick={onClick}
+            disabled={!available}
+            className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
+                active
+                    ? "border-primary/50 bg-primary/10"
+                    : "border-white/10 bg-white/[0.02] hover:bg-white/5"
+            } ${!available ? "opacity-40 cursor-not-allowed" : ""}`}
+        >
+            <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-200 font-medium">{label}</span>
+                {active && <span className="text-xs text-primary">Selected</span>}
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">{hint}</p>
+        </button>
     );
 }

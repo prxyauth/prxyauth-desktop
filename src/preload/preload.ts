@@ -220,6 +220,24 @@ contextBridge.exposeInMainWorld("prxApi", {
             ipcRenderer.invoke("node-runtime:is-installed"),
         start: (): Promise<ApiResult> => ipcRenderer.invoke("node-runtime:start"),
         stop: (): Promise<ApiResult> => ipcRenderer.invoke("node-runtime:stop"),
+        getBrowser: (): Promise<
+            ApiResult<{
+                system: string | null;
+                managed: string | null;
+                choice: string;
+                resolved: { path: string; kind: string } | null;
+            }>
+        > => ipcRenderer.invoke("node-runtime:get-browser"),
+        setBrowser: (
+            choice: "auto" | "system" | "managed",
+        ): Promise<
+            ApiResult<{
+                system: string | null;
+                managed: string | null;
+                choice: string;
+                resolved: { path: string; kind: string } | null;
+            }>
+        > => ipcRenderer.invoke("node-runtime:set-browser", choice),
     },
     nodeProvisioning: {
         status: (): Promise<ApiResult<{ provisioned: boolean }>> =>

@@ -31,8 +31,11 @@ import type { TunnelMessage } from "./tunnel-types";
 import { CdpRelay } from "./cdp-relay";
 import {
     AGENT_VERSION,
+    browserAvailability,
     closeRemoteBrowser,
     launchChromeRemote,
+    tryResolveChromeExecutable,
+    type BrowserChoice,
     type RemoteBrowser,
 } from "./chrome-launcher";
 import { ensureProfileDir } from "./profile-dirs";
@@ -71,6 +74,8 @@ interface AgentConfig {
     backendUrl: string;
     nodeName: string;
     provisionedAt: string;
+    /** Which executable self-hosted sessions launch (auto | system | managed). */
+    browserChoice?: BrowserChoice;
 }
 
 export function agentConfigPath(): string {
@@ -382,7 +387,7 @@ export class NodeAgent {
                 await closeRemoteBrowser(prior.browser).catch(() => {});
             }
             const dir = ensureProfileDir(profileDir || email);
-            const browser = await launchChromeRemote(dir, profileDir || email);
+            const browser = await launchChromeRemote(dir, profileDir || email, this.config?.browserChoice ?? "auto");
             this.sessions.set(sessionId, { browser });
             this.totalSessions += 1;
             // Browser-level CDP URL incl. UUID (captured at launch from
@@ -437,4 +442,67 @@ export function getNodeAgent(): NodeAgent {
 export function writeAgentConfig(config: Omit<AgentConfig, "provisionedAt">): void {
     const full: AgentConfig = { ...config, provisionedAt: new Date().toISOString() };
     writeFileSync(agentConfigPath(), JSON.stringify(full, null, 2), { encoding: "utf-8" });
+}
+
+/** Current browser choice from the persisted config (default "auto"). */
+export function getBrowserChoice(): BrowserChoice {
+    return readAgentConfig()?.browserChoice ?? readPendingBrowserChoice();
+}
+
+/** Persist a new browser choice; a running agent picks it up on next launch.
+ *  Works pre-provisioning too — the preference is stored standalone and
+ *  provisioning merges it into the agent config. */
+export function setBrowserChoice(choice: BrowserChoice): { success: boolean; error?: string } {
+    const existing = readAgentConfig();
+    if (existing) {
+        writeAgentConfig({
+            nodeKey: existing.nodeKey,
+            backendUrl: existing.backendUrl,
+            nodeName: existing.nodeName,
+            browserChoice: choice,
+        });
+        getNodeAgent().applyNewConfig();
+        return { success: true };
+    }
+    // Not provisioned yet — persist the preference standalone.
+    try {
+        writeFileSync(pendingBrowserChoicePath(), JSON.stringify({ browserChoice: choice }), {
+            encoding: "utf-8",
+        });
+        return { success: true };
+    } catch (err) {
+        return { success: false, error: String(err) };
+    }
+}
+
+/** Standalone preference file used when the node is not provisioned yet. */
+function pendingBrowserChoicePath(): string {
+    return path.join(app.getPath("userData"), "node-browser-choice.json");
+}
+
+function readPendingBrowserChoice(): BrowserChoice {
+    try {
+        if (!existsSync(pendingBrowserChoicePath())) return "auto";
+        const raw = JSON.parse(readFileSync(pendingBrowserChoicePath(), "utf-8")) as {
+            browserChoice?: BrowserChoice;
+        };
+        return raw.browserChoice ?? "auto";
+    } catch {
+        return "auto";
+    }
+}
+
+/** Browser availability for the settings UI (no key material). */
+export function getBrowserAvailability(): {
+    system: string | null;
+    managed: string | null;
+    choice: BrowserChoice;
+    resolved: { path: string; kind: "system" | "managed" } | null;
+} {
+    const choice = getBrowserChoice();
+    return {
+        ...browserAvailability(),
+        choice,
+        resolved: tryResolveChromeExecutable(choice),
+    };
 }

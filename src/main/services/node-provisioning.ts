@@ -15,6 +15,7 @@
  */
 
 import {
+    getBrowserChoice,
     getNodeAgent,
     readAgentConfig,
     writeAgentConfig,
@@ -122,12 +123,15 @@ export async function provisionNode(config: ProvisioningConfig): Promise<Provisi
         }
     }
 
-    // Step 2: persist the agent config (nodeKey lives ONLY here).
+    // Step 2: persist the agent config (nodeKey lives ONLY here). A browser
+    // preference chosen pre-provisioning merges in so the first session
+    // honors it.
     try {
         writeAgentConfig({
             nodeKey,
             backendUrl: config.backendUrl,
             nodeName: config.nodeName,
+            browserChoice: getBrowserChoice(),
         });
     } catch (err) {
         return { success: false, step: "write-config", error: String(err) };

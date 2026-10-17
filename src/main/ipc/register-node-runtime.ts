@@ -6,8 +6,11 @@
 
 import { ipcMain } from "electron";
 import {
+    getBrowserAvailability,
+    getBrowserChoice,
     getNodeAgent,
     isNodeAgentAvailable,
+    setBrowserChoice,
     type NodeAgentStatus,
 } from "../node/node-agent";
 
@@ -61,6 +64,28 @@ export function registerNodeRuntimeIpc(): void {
             } catch (err) {
                 return { success: false, error: String(err), data: agent.getStatus() };
             }
+        },
+    );
+
+    ipcMain.handle(
+        "node-runtime:get-browser",
+        (): ApiResult<ReturnType<typeof getBrowserAvailability>> => ({
+            success: true,
+            data: getBrowserAvailability(),
+        }),
+    );
+
+    ipcMain.handle(
+        "node-runtime:set-browser",
+        (_event, choice: unknown): ApiResult<ReturnType<typeof getBrowserAvailability>> => {
+            if (choice !== "auto" && choice !== "system" && choice !== "managed") {
+                return { success: false, error: "Invalid browser choice." };
+            }
+            const result = setBrowserChoice(choice);
+            if (!result.success) {
+                return { success: false, error: result.error };
+            }
+            return { success: true, data: getBrowserAvailability() };
         },
     );
 }

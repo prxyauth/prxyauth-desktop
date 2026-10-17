@@ -106,6 +106,24 @@ declare global {
                 isInstalled: () => Promise<IpcApiResult<{ state: string }>>;
                 start: () => Promise<IpcApiResult>;
                 stop: () => Promise<IpcApiResult>;
+                getBrowser: () => Promise<
+                    IpcApiResult<{
+                        system: string | null;
+                        managed: string | null;
+                        choice: string;
+                        resolved: { path: string; kind: string } | null;
+                    }>
+                >;
+                setBrowser: (
+                    choice: "auto" | "system" | "managed",
+                ) => Promise<
+                    IpcApiResult<{
+                        system: string | null;
+                        managed: string | null;
+                        choice: string;
+                        resolved: { path: string; kind: string } | null;
+                    }>
+                >;
             };
             nodeProvisioning: {
                 status: () => Promise<IpcApiResult<{ provisioned: boolean }>>;
